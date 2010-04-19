@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BDHandler", "BDHandler\BDHandler.csproj", "{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MediaPortal", "MediaPortal", "{B5B961E9-1D92-4B33-B2DF-CCC5FEFEDA66}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
