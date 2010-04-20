@@ -13,6 +13,7 @@ namespace MediaPortal.Plugins.BDHandler {
     public class BDHandlerPlugin : IPlugin, ISetupForm {
 
         public static string LogPrefix = "[BDHandler] ";
+
         private FactoryWrapper _factory;
 
         public BDHandlerPlugin() {
@@ -26,7 +27,6 @@ namespace MediaPortal.Plugins.BDHandler {
                     _pluginAuthor = ((AssemblyCompanyAttribute)attr).Company;
             }
         }
-
 
         #region IPlugin Members
 
