@@ -39,23 +39,29 @@ namespace MediaPortal.Plugins.BDHandler {
 
         public override bool Play(string strFile) {
             string path = strFile.ToLower();
-            
-            if (path.Length < 4) {
-                string discPath = Path.Combine(path,@"BDMV\index.bdmv");
-                if (File.Exists(discPath))
-                    path = discPath;
+
+            if (strFile.Length < 4) {
+                path = Path.Combine(strFile, @"BDMV\index.bdmv");
+                strFile = path;
             }
-            
+
             if (path.EndsWith(".bdmv") || path.EndsWith(".m2ts"))
-                strFile = doFeatureSelection(path);
+                strFile = doFeatureSelection(strFile);
 
             return base.Play(strFile);
         }
 
+        protected override bool GetInterfaces() {
+            if (CurrentFile.ToLower().EndsWith(".mpls"))
+                return renderGraph();
+
+            return base.GetInterfaces();
+        }
+        
         delegate BDROM ScanProcess(string path);
  
         private BDROM scanWorker(string path) {
-            Log.Info(BDHandlerPlugin.LogPrefix + "Scanning bluray structure for request: {0}", path);
+            Log.Info(BDHandlerPlugin.LogPrefix + "Scanning bluray structure: {0}", path);
             BDROM bluray = new BDROM(path.ToUpper());
             bluray.Scan();
             return bluray;            
@@ -110,14 +116,6 @@ namespace MediaPortal.Plugins.BDHandler {
             }
         }
 
-        protected override bool GetInterfaces()
-        {
-            if (CurrentFile.ToLower().EndsWith(".mpls"))
-                return renderGraph();        
-            
-            return base.GetInterfaces();
-        }
-
         private bool renderGraph() {
             try {
                 graphBuilder = (IGraphBuilder)new FilterGraph();
@@ -148,21 +146,29 @@ namespace MediaPortal.Plugins.BDHandler {
                 // add filters and audio renderer
                 using (Settings settings = new Settings(Config.GetFile(Config.Dir.Config, "MediaPortal.xml"))) {
 
+                    // Get the Video Codec configuration settings
+                    bool bAutoDecoderSettings = settings.GetValueAsBool("movieplayer", "autodecodersettings", false);
                     string strVideoCodec = settings.GetValueAsString("movieplayer", "mpeg2videocodec", "");
                     string strH264VideoCodec = settings.GetValueAsString("movieplayer", "h264videocodec", "");
                     string strAudioCodec = settings.GetValueAsString("movieplayer", "mpeg2audiocodec", "");
                     string strAACAudioCodec = settings.GetValueAsString("movieplayer", "aacaudiocodec", "");
                     string strAudiorenderer = settings.GetValueAsString("movieplayer", "audiorenderer", "Default DirectSound Device");
 
-                    if (!string.IsNullOrEmpty(strH264VideoCodec))
-                        DirectShowUtil.AddFilterToGraph(graphBuilder, strH264VideoCodec);
-                    if (!string.IsNullOrEmpty(strVideoCodec) && strVideoCodec != strH264VideoCodec)
-                        DirectShowUtil.AddFilterToGraph(graphBuilder, strVideoCodec);
-                    if (!string.IsNullOrEmpty(strAudioCodec))
-                        DirectShowUtil.AddFilterToGraph(graphBuilder, strAudioCodec);
-                    if (!string.IsNullOrEmpty(strAACAudioCodec) && strAudioCodec != strAACAudioCodec)
-                        DirectShowUtil.AddFilterToGraph(graphBuilder, strAACAudioCodec);                    
-                    
+                    // todo: custom filters from the post-processing tab?
+
+                    // if "Auto Decoder Settings" is unchecked we add the filters specified in the codec configuration
+                    // otherwise the DirectShow merit system is used (except for renderer and source filter)
+                    if (!bAutoDecoderSettings) {
+                        if (!string.IsNullOrEmpty(strH264VideoCodec))
+                            DirectShowUtil.AddFilterToGraph(graphBuilder, strH264VideoCodec);
+                        if (!string.IsNullOrEmpty(strVideoCodec) && strVideoCodec != strH264VideoCodec)
+                            DirectShowUtil.AddFilterToGraph(graphBuilder, strVideoCodec);
+                        if (!string.IsNullOrEmpty(strAudioCodec))
+                            DirectShowUtil.AddFilterToGraph(graphBuilder, strAudioCodec);
+                        if (!string.IsNullOrEmpty(strAACAudioCodec) && strAudioCodec != strAACAudioCodec)
+                            DirectShowUtil.AddFilterToGraph(graphBuilder, strAACAudioCodec);
+                    }
+
                     DirectShowUtil.AddAudioRendererToGraph(graphBuilder, strAudiorenderer, false);
                 }
 
@@ -188,6 +194,7 @@ namespace MediaPortal.Plugins.BDHandler {
                 m_iVideoWidth = Vmr9.VideoWidth;
                 m_iVideoHeight = Vmr9.VideoHeight;
                 Vmr9.SetDeinterlaceMode();
+
                 return true;
             }
             catch (Exception e) {
