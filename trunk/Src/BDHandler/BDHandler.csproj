@@ -72,6 +72,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Content Include="Resources\revision.txt" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -113,5 +114,6 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>xcopy "$(TargetPath)" "%25PROGRAMFILES%25\Team MediaPortal\MediaPortal\Plugins\process" /Y /I</PostBuildEvent>
+    <PreBuildEvent>"$(SolutionDir)\Tools\RevStamp.exe" "http://mp-bdhandler.googlecode.com/svn/trunk/" "$(ProjectDir)\Resources\revision.txt"  "$(ProjectDir)\Properties\AssemblyInfo.cs"</PreBuildEvent>
   </PropertyGroup>
 </Project>
