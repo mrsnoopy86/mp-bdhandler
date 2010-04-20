@@ -6,6 +6,8 @@ using System.Reflection;
 using MediaPortal.Configuration;
 using MediaPortal.GUI.Library;
 using MediaPortal.Player;
+using MediaPortal.Ripper;
+using MediaPortal.Profile;
 
 namespace MediaPortal.Plugins.BDHandler {
 
@@ -28,11 +30,42 @@ namespace MediaPortal.Plugins.BDHandler {
             }
         }
 
+        private void OnMessage(GUIMessage message) {
+            if (message.Message != GUIMessage.MessageType.GUI_MSG_BLURAY_DISK_INSERTED || g_Player.Playing)
+                return;
+
+            playDisc(message.Label);
+        }
+
+        private void playDisc(string device) {
+            bool play = true;
+            using (Settings xmlreader = new MPSettings()) {
+                string autoPlay = xmlreader.GetValueAsString("dvdplayer", "autoplay", "Ask");
+                if (autoPlay == "No")
+                    return;
+
+                if (autoPlay == "Ask") {
+                    GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_ASKYESNO, 0, 0, 0, 0, 0, null);
+                    msg.Param1 = 713;
+                    msg.Param2 = 531;
+
+                    GUIWindowManager.SendMessage(msg);
+                    play = msg.Param1 != 0;
+                }
+            }
+
+            if (play && g_Player.Play(device) && g_Player.Playing)
+                g_Player.ShowFullScreenWindow();
+        }
+
         #region IPlugin Members
 
         public void Start() {
             _factory = new FactoryWrapper(g_Player.Factory);
             g_Player.Factory = _factory;
+
+            GUIWindowManager.Receivers += new SendMessageHandler(this.OnMessage);
+
             Log.Info(LogPrefix + " Enabled.");
         }
 
