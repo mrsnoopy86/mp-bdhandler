@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Reflection;
-using MediaPortal.Configuration;
-using MediaPortal.GUI.Library;
-using MediaPortal.Player;
-using MediaPortal.Ripper;
-using MediaPortal.Profile;
-using Microsoft.Win32;
-using System.Security.AccessControl;
 using System.Diagnostics;
 using System.IO;
+using System.Security.AccessControl;
+using MediaPortal.GUI.Library;
+using MediaPortal.Player;
+using MediaPortal.Profile;
+using Microsoft.Win32;
 
 namespace MediaPortal.Plugins.BDHandler {
 
