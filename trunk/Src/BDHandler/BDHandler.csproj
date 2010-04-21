@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BDHandlerCore.cs" />
     <Compile Include="BDHandlerPlugin.cs" />
     <Compile Include="BDROM\BDInfoSettings.cs" />
     <Compile Include="BDROM\BDROM.cs" />

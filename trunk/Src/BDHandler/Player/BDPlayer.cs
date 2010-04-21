@@ -24,13 +24,13 @@ namespace MediaPortal.Plugins.BDHandler {
     {
 
         // "MPC - Mpeg Source (Gabest)
-        private static Guid MpcMpegSourceFilter {
+        public static Guid MpcMpegSourceFilter {
             get {
                 return new Guid("{1365BE7A-C86A-473C-9A41-C0A6E82C9FA3}");
             }
         }
-        
-        private static string MpcMegSourceFilterName = "MPC - Mpeg Source (Gabest)";
+
+        public static string MpcMegSourceFilterName = "MPC - Mpeg Source (Gabest)";
 
         public BDPlayer() : base(g_Player.MediaType.Video) { }
 
@@ -61,7 +61,7 @@ namespace MediaPortal.Plugins.BDHandler {
         delegate BDROM ScanProcess(string path);
  
         private BDROM scanWorker(string path) {
-            Log.Info(BDHandlerPlugin.LogPrefix + "Scanning bluray structure: {0}", path);
+            Log.Info(BDHandlerCore.LogPrefix + "Scanning bluray structure: {0}", path);
             BDROM bluray = new BDROM(path.ToUpper());
             bluray.Scan();
             return bluray;            
@@ -111,7 +111,7 @@ namespace MediaPortal.Plugins.BDHandler {
                 return Path.Combine(bluray.DirectoryPLAYLIST.FullName, playLists[dialog.SelectedId - 1].Name);
             }
             catch (Exception e) {
-                Log.Error(BDHandlerPlugin.LogPrefix + "Exception while reading bluray structure {0} {1}", e.Message, e.StackTrace);
+                Log.Error(BDHandlerCore.LogPrefix + "Exception while reading bluray structure {0} {1}", e.Message, e.StackTrace);
                 return path;
             }
         }
@@ -135,7 +135,7 @@ namespace MediaPortal.Plugins.BDHandler {
                 // check if it's avaiable
                 if (source == null) {
                     Error.SetError("Unable to load source filter", "Please register filter: " + MpcMegSourceFilterName);
-                    Log.Error(BDHandlerPlugin.LogPrefix + "Unable to load DirectShowFilter: " + MpcMegSourceFilterName, null);
+                    Log.Error(BDHandlerCore.LogPrefix + "Unable to load DirectShowFilter: " + MpcMegSourceFilterName, null);
                     return false;
                 }
 
@@ -179,7 +179,7 @@ namespace MediaPortal.Plugins.BDHandler {
                 SubEngine.GetInstance().LoadSubtitles(graphBuilder, m_strCurrentFile);
 
                 if (Vmr9 == null || !Vmr9.IsVMR9Connected) {
-                    Log.Error(BDHandlerPlugin.LogPrefix + "Failed to render file.");
+                    Log.Error(BDHandlerCore.LogPrefix + "Failed to render file.");
                     mediaCtrl = null;
                     Cleanup();
                     return false;
@@ -199,7 +199,7 @@ namespace MediaPortal.Plugins.BDHandler {
             }
             catch (Exception e) {
                 Error.SetError("Unable to play movie", "Unable build graph for VMR9");
-                Log.Error(BDHandlerPlugin.LogPrefix + "Exception while creating DShow graph {0} {1}", e.Message, e.StackTrace);
+                Log.Error(BDHandlerCore.LogPrefix + "Exception while creating DShow graph {0} {1}", e.Message, e.StackTrace);
                 Cleanup();
                 return false;
             }

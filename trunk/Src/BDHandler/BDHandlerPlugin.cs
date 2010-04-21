@@ -14,10 +14,6 @@ namespace MediaPortal.Plugins.BDHandler {
     [PluginIcons("MediaPortal.Plugins.BDHandler.Resources.BDHandler.png", "MediaPortal.Plugins.BDHandler.Resources.BDHandlerDisabled.png")]
     public class BDHandlerPlugin : IPlugin, ISetupForm {
 
-        public static string LogPrefix = "[BDHandler] ";
-
-        private FactoryWrapper _factory;
-
         public BDHandlerPlugin() {
             Assembly assy = Assembly.GetExecutingAssembly();
             foreach (Attribute attr in Attribute.GetCustomAttributes(assy)) {
@@ -34,44 +30,30 @@ namespace MediaPortal.Plugins.BDHandler {
             if (message.Message != GUIMessage.MessageType.GUI_MSG_BLURAY_DISK_INSERTED || g_Player.Playing)
                 return;
 
-            playDisc(message.Label);
-        }
-
-        private void playDisc(string device) {
-            bool play = true;
-            using (Settings xmlreader = new MPSettings()) {
-                string autoPlay = xmlreader.GetValueAsString("dvdplayer", "autoplay", "Ask");
-                if (autoPlay == "No")
-                    return;
-
-                if (autoPlay == "Ask") {
-                    GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_ASKYESNO, 0, 0, 0, 0, 0, null);
-                    msg.Param1 = 713;
-                    msg.Param2 = 531;
-
-                    GUIWindowManager.SendMessage(msg);
-                    play = msg.Param1 != 0;
-                }
-            }
-
-            if (play && g_Player.Play(device) && g_Player.Playing)
-                g_Player.ShowFullScreenWindow();
+            BDHandlerCore.PlayDisc(message.Label);
         }
 
         #region IPlugin Members
 
         public void Start() {
-            _factory = new FactoryWrapper(g_Player.Factory);
-            g_Player.Factory = _factory;
-
-            GUIWindowManager.Receivers += new SendMessageHandler(this.OnMessage);
-
-            Log.Info(LogPrefix + " Enabled.");
+            if (!BDHandlerCore.Enabled) {
+                if (BDHandlerCore.Init()) {
+                    BDHandlerCore.Enabled = true;
+                    GUIWindowManager.Receivers += new SendMessageHandler(this.OnMessage);
+                    Log.Info(BDHandlerCore.LogPrefix + "Player handling is activated.");
+                }
+                else {
+                    Log.Info(BDHandlerCore.LogPrefix + "Plugin is disabled because no suitable splitter was detected.");
+                }
+            }
         }
 
         public void Stop() {
-            g_Player.Factory = _factory.GetDefaultFactory();
-            Log.Info(LogPrefix + " Disabled.");
+            if (BDHandlerCore.Enabled) {
+                GUIWindowManager.Receivers -= OnMessage;
+                BDHandlerCore.Enabled = false;
+                Log.Info(BDHandlerCore.LogPrefix + "Player handling is deactivated.");
+            }
         }
 
         #endregion
@@ -99,7 +81,7 @@ namespace MediaPortal.Plugins.BDHandler {
         }
 
         public int GetWindowId() {
-            return 0;
+            return 19801015;
         }
 
         public bool DefaultEnabled() {
