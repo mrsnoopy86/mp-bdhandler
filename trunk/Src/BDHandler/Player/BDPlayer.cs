@@ -80,6 +80,8 @@ namespace MediaPortal.Plugins.BDHandler {
 
                 GUIWaitCursor.Hide();
 
+                Log.Info(BDHandlerCore.LogPrefix + "Found {0} valid playlists.", playLists.Count);
+
                 if (playLists.Count == 0)
                     return path;
 
@@ -88,6 +90,7 @@ namespace MediaPortal.Plugins.BDHandler {
 
                 IDialogbox dialog = (IDialogbox)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
                 dialog.Reset();
+                dialog.SetHeading("Bluray: Select Feature");
 
                 for (int i = 0; i < playLists.Count; i++) {
                     TSPlaylistFile playList = playLists[i];
@@ -97,11 +100,10 @@ namespace MediaPortal.Plugins.BDHandler {
                     dialog.Add(feature);
                 }
 
-                dialog.SetHeading("Bluray: Select Feature");
                 dialog.DoModal(GUIWindowManager.ActiveWindow);
                 if (dialog.SelectedId < 1)
                     return path;
-
+                
                 return Path.Combine(bluray.DirectoryPLAYLIST.FullName, playLists[dialog.SelectedId - 1].Name);
             }
             catch (Exception e) {

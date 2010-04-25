@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿namespace BDInfo {
 
-namespace BDInfo {
+    /// <summary>
+    /// Settings needed for BDInfo library
+    /// </summary>
     public class BDInfoSettings {
     
         public static bool FilterLoopingPlaylists = true;

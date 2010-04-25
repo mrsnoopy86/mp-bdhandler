@@ -1,9 +1,14 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BDHandler", "BDHandler\BDHandler.csproj", "{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}"
-EndProject
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MediaPortal", "MediaPortal", "{B5B961E9-1D92-4B33-B2DF-CCC5FEFEDA66}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{6086F48F-E65E-440D-A0FF-BFB8E74D4A9D}"
+	ProjectSection(SolutionItems) = preProject
+		Tools\RevStamp.exe = Tools\RevStamp.exe
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BDHandler", "BDHandler\BDHandler.csproj", "{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Externals\Core\Core.csproj", "{02FFFC1F-2555-4B99-8B01-3432D0673855}"
 EndProject
@@ -12,11 +17,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaPortal.Support", "Externals\MediaPortal.Support\MediaPortal.Support.csproj", "{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils", "Externals\Utils\Utils.csproj", "{6DA0E4DF-6230-4642-98B5-E690BB6942BB}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{6086F48F-E65E-440D-A0FF-BFB8E74D4A9D}"
-	ProjectSection(SolutionItems) = preProject
-		Tools\RevStamp.exe = Tools\RevStamp.exe
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
