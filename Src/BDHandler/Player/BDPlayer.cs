@@ -51,12 +51,13 @@ namespace MediaPortal.Plugins.BDHandler {
 
             return base.GetInterfaces();
         }
-        
-        delegate BDROM ScanProcess(string path);
- 
-        private BDROM scanWorker(string path) {
+
+        delegate BDInfo ScanProcess(string path);
+
+        private BDInfo scanWorker(string path)
+        {
             Log.Info(BDHandlerCore.LogPrefix + "Scanning bluray structure: {0}", path);
-            BDROM bluray = new BDROM(path.ToUpper());
+            BDInfo bluray = new BDInfo(path.ToUpper());
             bluray.Scan();
             return bluray;            
         }
@@ -75,8 +76,10 @@ namespace MediaPortal.Plugins.BDHandler {
                     Thread.Sleep(100);
                 }
 
-                BDROM bluray = scanner.EndInvoke(result);
+                BDInfo bluray = scanner.EndInvoke(result);
                 List<TSPlaylistFile> playLists = bluray.PlaylistFiles.Values.Where(p => p.IsValid).OrderByDescending(p => p.TotalLength).ToList();
+                
+                string heading = (bluray.Title != string.Empty) ? bluray.Title : "Bluray: Select Feature";
 
                 GUIWaitCursor.Hide();
 
@@ -90,7 +93,7 @@ namespace MediaPortal.Plugins.BDHandler {
 
                 IDialogbox dialog = (IDialogbox)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
                 dialog.Reset();
-                dialog.SetHeading("Bluray: Select Feature");
+                dialog.SetHeading(heading);
 
                 for (int i = 0; i < playLists.Count; i++) {
                     TSPlaylistFile playList = playLists[i];
@@ -102,9 +105,13 @@ namespace MediaPortal.Plugins.BDHandler {
 
                 dialog.DoModal(GUIWindowManager.ActiveWindow);
                 if (dialog.SelectedId < 1)
+                {
+                    Log.Debug(BDHandlerCore.LogPrefix + "User cancelled dialog.");
                     return path;
-                
-                return Path.Combine(bluray.DirectoryPLAYLIST.FullName, playLists[dialog.SelectedId - 1].Name);
+                }
+
+                TSPlaylistFile listToPlay = playLists[dialog.SelectedId - 1];
+                return Path.Combine(bluray.DirectoryPLAYLIST.FullName, listToPlay.Name);
             }
             catch (Exception e) {
                 Log.Error(BDHandlerCore.LogPrefix + "Exception while reading bluray structure {0} {1}", e.Message, e.StackTrace);

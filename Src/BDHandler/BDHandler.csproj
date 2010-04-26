@@ -69,6 +69,7 @@
   <ItemGroup>
     <Compile Include="BDHandlerCore.cs" />
     <Compile Include="BDHandlerPlugin.cs" />
+    <Compile Include="BDInfo.cs" />
     <Compile Include="BDInfoSettings.cs" />
     <Compile Include="BDROM\BDROM.cs" />
     <Compile Include="BDROM\LanguageCodes.cs" />
