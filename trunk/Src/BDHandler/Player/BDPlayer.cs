@@ -12,14 +12,17 @@ using MediaPortal.Player;
 using MediaPortal.Player.Subtitles;
 using MediaPortal.Profile;
 
-namespace MediaPortal.Plugins.BDHandler {
+namespace MediaPortal.Plugins.BDHandler
+{
 
     public class BDPlayer : VideoPlayerVMR9
     {
 
         // "MPC - Mpeg Source (Gabest)
-        public static Guid MpcMpegSourceFilter {
-            get {
+        public static Guid MpcMpegSourceFilter
+        {
+            get
+            {
                 return new Guid("{1365BE7A-C86A-473C-9A41-C0A6E82C9FA3}");
             }
         }
@@ -28,13 +31,16 @@ namespace MediaPortal.Plugins.BDHandler {
 
         public BDPlayer() : base(g_Player.MediaType.Video) { }
 
-        public BDPlayer(g_Player.MediaType type) : base(type)
+        public BDPlayer(g_Player.MediaType type)
+            : base(type)
         { }
 
-        public override bool Play(string strFile) {
+        public override bool Play(string strFile)
+        {
             string path = strFile.ToLower();
 
-            if (strFile.Length < 4) {
+            if (strFile.Length < 4)
+            {
                 path = Path.Combine(strFile, @"BDMV\index.bdmv");
                 strFile = path;
             }
@@ -45,7 +51,8 @@ namespace MediaPortal.Plugins.BDHandler {
             return base.Play(strFile);
         }
 
-        protected override bool GetInterfaces() {
+        protected override bool GetInterfaces()
+        {
             if (CurrentFile.ToLower().EndsWith(".mpls"))
                 return renderGraph();
 
@@ -59,26 +66,29 @@ namespace MediaPortal.Plugins.BDHandler {
             Log.Info(BDHandlerCore.LogPrefix + "Scanning bluray structure: {0}", path);
             BDInfo bluray = new BDInfo(path.ToUpper());
             bluray.Scan();
-            return bluray;            
+            return bluray;
         }
 
-        private string doFeatureSelection(string path) {
-            try {
+        private string doFeatureSelection(string path)
+        {
+            try
+            {
 
                 ScanProcess scanner = new ScanProcess(scanWorker);
                 IAsyncResult result = scanner.BeginInvoke(path, null, scanner);
 
                 // Show the wait cursor during scan
                 GUIWaitCursor.Init();
-                GUIWaitCursor.Show(); 
-                while(result.IsCompleted == false) {
+                GUIWaitCursor.Show();
+                while (result.IsCompleted == false)
+                {
                     GUIWindowManager.Process();
                     Thread.Sleep(100);
                 }
 
                 BDInfo bluray = scanner.EndInvoke(result);
                 List<TSPlaylistFile> playLists = bluray.PlaylistFiles.Values.Where(p => p.IsValid).OrderByDescending(p => p.TotalLength).ToList();
-                
+
                 string heading = (bluray.Title != string.Empty) ? bluray.Title : "Bluray: Select Feature";
 
                 GUIWaitCursor.Hide();
@@ -95,7 +105,8 @@ namespace MediaPortal.Plugins.BDHandler {
                 dialog.Reset();
                 dialog.SetHeading(heading);
 
-                for (int i = 0; i < playLists.Count; i++) {
+                for (int i = 0; i < playLists.Count; i++)
+                {
                     TSPlaylistFile playList = playLists[i];
                     TimeSpan lengthSpan = new TimeSpan((long)(playList.TotalLength * 10000000));
                     string length = string.Format("{0:D2}:{1:D2}:{2:D2}", lengthSpan.Hours, lengthSpan.Minutes, lengthSpan.Seconds);
@@ -111,20 +122,71 @@ namespace MediaPortal.Plugins.BDHandler {
                 }
 
                 TSPlaylistFile listToPlay = playLists[dialog.SelectedId - 1];
-                return Path.Combine(bluray.DirectoryPLAYLIST.FullName, listToPlay.Name);
+                string playlistFile = Path.Combine(bluray.DirectoryPLAYLIST.FullName, listToPlay.Name);
+
+                #region Refresh Rate Changer
+
+                // Because g_player reads the framerate from the iniating media path we need to
+                // do a re-check of the framerate after the user has chosen the playlist. We do
+                // this by grabbing the framerate from the first video stream in the playlist as
+                // this data was already scanned.
+                using (Settings xmlreader = new MPSettings())
+                {
+                    bool enabled = xmlreader.GetValueAsBool("general", "autochangerefreshrate", false);
+                    if (enabled)
+                    {
+                        TSFrameRate framerate = listToPlay.VideoStreams[0].FrameRate;
+                        if (framerate != TSFrameRate.Unknown)
+                        {
+                            double fps = 0;
+                            switch (framerate)
+                            {
+                                case TSFrameRate.FRAMERATE_59_94:
+                                    fps = 59.94;
+                                    break;
+                                case TSFrameRate.FRAMERATE_50:
+                                    fps = 50;
+                                    break;
+                                case TSFrameRate.FRAMERATE_29_97:
+                                    fps = 29.97;
+                                    break;
+                                case TSFrameRate.FRAMERATE_25:
+                                    fps = 25;
+                                    break;
+                                case TSFrameRate.FRAMERATE_24:
+                                    fps = 24;
+                                    break;
+                                case TSFrameRate.FRAMERATE_23_976:
+                                    fps = 23.976;
+                                    break;
+                            }
+
+                            Log.Debug(BDHandlerCore.LogPrefix + "Initiating refresh rate change: {0}", fps);
+                            RefreshRateChanger.SetRefreshRateBasedOnFPS(fps, playlistFile, RefreshRateChanger.MediaType.Video);
+                        }
+                    }
+                }
+
+                #endregion
+
+                return playlistFile;
             }
-            catch (Exception e) {
+            catch (Exception e)
+            {
                 Log.Error(BDHandlerCore.LogPrefix + "Exception while reading bluray structure {0} {1}", e.Message, e.StackTrace);
                 return path;
             }
         }
 
-        private bool renderGraph() {
-            try {
+        private bool renderGraph()
+        {
+            try
+            {
                 graphBuilder = (IGraphBuilder)new FilterGraph();
                 _rotEntry = new DsROTEntry((IFilterGraph)graphBuilder);
 
-                Log.Info("BDPlayer: Active");
+                Log.Info(BDHandlerCore.LogPrefix + "Player is active.");
+
                 GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_SWITCH_FULL_WINDOWED, 0, 0, 0, 1, 0, null);
                 GUIWindowManager.SendMessage(msg);
 
@@ -136,7 +198,8 @@ namespace MediaPortal.Plugins.BDHandler {
                 IBaseFilter source = DirectShowUtil.AddFilterToGraph(graphBuilder, MpcMegSourceFilterName);
 
                 // check if it's avaiable
-                if (source == null) {
+                if (source == null)
+                {
                     Error.SetError("Unable to load source filter", "Please register filter: " + MpcMegSourceFilterName);
                     Log.Error(BDHandlerCore.LogPrefix + "Unable to load DirectShowFilter: " + MpcMegSourceFilterName, null);
                     return false;
@@ -145,23 +208,26 @@ namespace MediaPortal.Plugins.BDHandler {
                 // load the file
                 int result = ((IFileSourceFilter)source).Load(CurrentFile, null);
                 if (result != 0) return false;
-               
+
                 // add filters and audio renderer
-                using (Settings settings = new Settings(Config.GetFile(Config.Dir.Config, "MediaPortal.xml"))) {
-
-                    // Get the Video Codec configuration settings
+                using (Settings settings = new Settings(Config.GetFile(Config.Dir.Config, "MediaPortal.xml")))
+                {
+                    // Get the minimal settings required
                     bool bAutoDecoderSettings = settings.GetValueAsBool("movieplayer", "autodecodersettings", false);
-                    string strVideoCodec = settings.GetValueAsString("movieplayer", "mpeg2videocodec", "");
-                    string strH264VideoCodec = settings.GetValueAsString("movieplayer", "h264videocodec", "");
-                    string strAudioCodec = settings.GetValueAsString("movieplayer", "mpeg2audiocodec", "");
-                    string strAACAudioCodec = settings.GetValueAsString("movieplayer", "aacaudiocodec", "");
                     string strAudiorenderer = settings.GetValueAsString("movieplayer", "audiorenderer", "Default DirectSound Device");
-
-                    // todo: custom filters from the post-processing tab?
 
                     // if "Auto Decoder Settings" is unchecked we add the filters specified in the codec configuration
                     // otherwise the DirectShow merit system is used (except for renderer and source filter)
-                    if (!bAutoDecoderSettings) {
+                    if (!bAutoDecoderSettings)
+                    {
+                        // Get the Video Codec configuration settings
+                        string strVideoCodec = settings.GetValueAsString("movieplayer", "mpeg2videocodec", "");
+                        string strH264VideoCodec = settings.GetValueAsString("movieplayer", "h264videocodec", "");
+                        string strAudioCodec = settings.GetValueAsString("movieplayer", "mpeg2audiocodec", "");
+                        string strAACAudioCodec = settings.GetValueAsString("movieplayer", "aacaudiocodec", "");
+
+                        // todo: custom filters from the post-processing tab?
+                        
                         if (!string.IsNullOrEmpty(strH264VideoCodec))
                             DirectShowUtil.AddFilterToGraph(graphBuilder, strH264VideoCodec);
                         if (!string.IsNullOrEmpty(strVideoCodec) && strVideoCodec != strH264VideoCodec)
@@ -178,10 +244,11 @@ namespace MediaPortal.Plugins.BDHandler {
                 DirectShowUtil.RenderUnconnectedOutputPins(graphBuilder, source);
                 DirectShowUtil.ReleaseComObject(source); source = null;
                 DirectShowUtil.RemoveUnusedFiltersFromGraph(graphBuilder);
-                
+
                 SubEngine.GetInstance().LoadSubtitles(graphBuilder, m_strCurrentFile);
 
-                if (Vmr9 == null || !Vmr9.IsVMR9Connected) {
+                if (Vmr9 == null || !Vmr9.IsVMR9Connected)
+                {
                     Log.Error(BDHandlerCore.LogPrefix + "Failed to render file.");
                     mediaCtrl = null;
                     Cleanup();
@@ -200,7 +267,8 @@ namespace MediaPortal.Plugins.BDHandler {
 
                 return true;
             }
-            catch (Exception e) {
+            catch (Exception e)
+            {
                 Error.SetError("Unable to play movie", "Unable build graph for VMR9");
                 Log.Error(BDHandlerCore.LogPrefix + "Exception while creating DShow graph {0} {1}", e.Message, e.StackTrace);
                 Cleanup();
