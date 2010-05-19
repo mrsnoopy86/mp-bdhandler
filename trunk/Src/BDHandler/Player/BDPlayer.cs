@@ -46,7 +46,12 @@ namespace MediaPortal.Plugins.BDHandler
             }
 
             if (path.EndsWith(".bdmv") || path.EndsWith(".m2ts"))
-                strFile = doFeatureSelection(strFile);
+            {
+                if (!doFeatureSelection(ref strFile))
+                {
+                    return false;
+                }
+            }
 
             return base.Play(strFile);
         }
@@ -69,13 +74,17 @@ namespace MediaPortal.Plugins.BDHandler
             return bluray;
         }
 
-        private string doFeatureSelection(string path)
+        /// <summary>
+        /// Returns wether a choice was made and changes the file path
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns>True if playback should continue, False if user cancelled.</returns>
+        private bool doFeatureSelection(ref string filePath)
         {
             try
             {
-
                 ScanProcess scanner = new ScanProcess(scanWorker);
-                IAsyncResult result = scanner.BeginInvoke(path, null, scanner);
+                IAsyncResult result = scanner.BeginInvoke(filePath, null, scanner);
 
                 // Show the wait cursor during scan
                 GUIWaitCursor.Init();
@@ -87,19 +96,26 @@ namespace MediaPortal.Plugins.BDHandler
                 }
 
                 BDInfo bluray = scanner.EndInvoke(result);
-                List<TSPlaylistFile> playLists = bluray.PlaylistFiles.Values.Where(p => p.IsValid).OrderByDescending(p => p.TotalLength).ToList();
+                List<TSPlaylistFile> playLists = bluray.PlaylistFiles.Values.Where(p => p.IsValid).OrderByDescending(p => p.TotalLength).Distinct().ToList();
 
                 string heading = (bluray.Title != string.Empty) ? bluray.Title : "Bluray: Select Feature";
 
-                GUIWaitCursor.Hide();
-
-                Log.Info(BDHandlerCore.LogPrefix + "Found {0} valid playlists.", playLists.Count);
+                GUIWaitCursor.Hide();                
 
                 if (playLists.Count == 0)
-                    return path;
+                {
+                    Log.Info(BDHandlerCore.LogPrefix + " No playlists found, bypassing dialog.", playLists.Count);
+                    return true;
+                }
 
                 if (playLists.Count == 1)
-                    return Path.Combine(bluray.DirectoryPLAYLIST.FullName, playLists[0].Name);
+                {
+                    filePath = Path.Combine(bluray.DirectoryPLAYLIST.FullName, playLists[0].Name);
+                    Log.Info(BDHandlerCore.LogPrefix + "Found one valid playlist, bypassing dialog.", filePath);
+                    return true;
+                }
+
+                Log.Info(BDHandlerCore.LogPrefix + "Found {0} valid playlists, showing selection dialog.", playLists.Count);
 
                 IDialogbox dialog = (IDialogbox)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
                 dialog.Reset();
@@ -118,11 +134,13 @@ namespace MediaPortal.Plugins.BDHandler
                 if (dialog.SelectedId < 1)
                 {
                     Log.Debug(BDHandlerCore.LogPrefix + "User cancelled dialog.");
-                    return path;
+                    return false;
                 }
 
                 TSPlaylistFile listToPlay = playLists[dialog.SelectedId - 1];
-                string playlistFile = Path.Combine(bluray.DirectoryPLAYLIST.FullName, listToPlay.Name);
+                
+                // create the chosen file path (playlist)
+                filePath = Path.Combine(bluray.DirectoryPLAYLIST.FullName, listToPlay.Name);
 
                 #region Refresh Rate Changer
 
@@ -162,19 +180,19 @@ namespace MediaPortal.Plugins.BDHandler
                             }
 
                             Log.Debug(BDHandlerCore.LogPrefix + "Initiating refresh rate change: {0}", fps);
-                            RefreshRateChanger.SetRefreshRateBasedOnFPS(fps, playlistFile, RefreshRateChanger.MediaType.Video);
+                            RefreshRateChanger.SetRefreshRateBasedOnFPS(fps, filePath, RefreshRateChanger.MediaType.Video);
                         }
                     }
                 }
 
                 #endregion
 
-                return playlistFile;
+                return true;
             }
             catch (Exception e)
             {
                 Log.Error(BDHandlerCore.LogPrefix + "Exception while reading bluray structure {0} {1}", e.Message, e.StackTrace);
-                return path;
+                return true;
             }
         }
 
@@ -221,6 +239,7 @@ namespace MediaPortal.Plugins.BDHandler
                     if (!bAutoDecoderSettings)
                     {
                         // Get the Video Codec configuration settings
+                        
                         string strVideoCodec = settings.GetValueAsString("movieplayer", "mpeg2videocodec", "");
                         string strH264VideoCodec = settings.GetValueAsString("movieplayer", "h264videocodec", "");
                         string strAudioCodec = settings.GetValueAsString("movieplayer", "mpeg2audiocodec", "");
@@ -230,8 +249,10 @@ namespace MediaPortal.Plugins.BDHandler
                         
                         if (!string.IsNullOrEmpty(strH264VideoCodec))
                             DirectShowUtil.AddFilterToGraph(graphBuilder, strH264VideoCodec);
-                        if (!string.IsNullOrEmpty(strVideoCodec) && strVideoCodec != strH264VideoCodec)
-                            DirectShowUtil.AddFilterToGraph(graphBuilder, strVideoCodec);
+                        
+                        //if (!string.IsNullOrEmpty(strVideoCodec) && strVideoCodec != strH264VideoCodec)
+                        //    DirectShowUtil.AddFilterToGraph(graphBuilder, strVideoCodec);
+                        
                         if (!string.IsNullOrEmpty(strAudioCodec))
                             DirectShowUtil.AddFilterToGraph(graphBuilder, strAudioCodec);
                         if (!string.IsNullOrEmpty(strAACAudioCodec) && strAudioCodec != strAACAudioCodec)
