@@ -82,7 +82,7 @@ namespace BDInfo
                         }
                         else if ((pictureType & 0x4000) == 0)
                         {
-                            tag = "B"; // TODO: "BI"
+                            tag = "BI"; // TODO: "B","I"?
                         }
                         else
                         {

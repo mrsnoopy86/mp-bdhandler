@@ -7,15 +7,15 @@ using MediaPortal.Player;
 using MediaPortal.Profile;
 using Microsoft.Win32;
 
-namespace MediaPortal.Plugins.BDHandler {
+namespace MediaPortal.Plugins.BDHandler 
+{
 
     public class BDHandlerCore {
 
         static BDHandlerCore() {}
 
         private static FactoryWrapper _factory;
-
-        public static string LogPrefix = "[BDHandler] ";
+        private static string logPrefix = "BDHandler:";
 
         public static bool Init() {
             try {
@@ -30,16 +30,16 @@ namespace MediaPortal.Plugins.BDHandler {
                         return false;
 
                     FileVersionInfo info = FileVersionInfo.GetVersionInfo(codecFile);
-                    Log.Info(LogPrefix + "Detected '{0}' ({1}.{2}.{3}.{4})", BDPlayer.MpcMegSourceFilterName, info.ProductMajorPart, info.ProductMinorPart, info.ProductBuildPart, info.ProductPrivatePart);
+                    LogInfo("Detected '{0}' ({1}.{2}.{3}.{4})", BDPlayer.MpcMegSourceFilterName, info.ProductMajorPart, info.ProductMinorPart, info.ProductBuildPart, info.ProductPrivatePart);
                     return (info.ProductBuildPart >= 1287);
                 }
                 else {
-                    Log.Info(LogPrefix + "'{0}' was not detected on the system.", BDPlayer.MpcMegSourceFilterName);
+                    LogInfo("'{0}' was not detected on the system.", BDPlayer.MpcMegSourceFilterName);
                     return false;
                 }
             }
             catch (Exception) {
-                Log.Warn(LogPrefix + "Source filter detection failed.");
+                LogWarn("Source filter detection failed.");
                 return true;
             }
         }
@@ -81,6 +81,34 @@ namespace MediaPortal.Plugins.BDHandler {
             if (play && g_Player.Play(device) && g_Player.Playing)
                 g_Player.ShowFullScreenWindow();
         }
+
+        #region Logging
+
+        public static void LogInfo(string format, params object[] args)
+        {
+            string logText = string.Format("{0} {1}", logPrefix, format);
+            Log.Info(logText, args);
+        }
+
+        public static void LogWarn(string format, params object[] args)
+        {
+            string logText = string.Format("{0} {1}", logPrefix, format);
+            Log.Warn(logText, args);
+        }
+
+        public static void LogDebug(string format, params object[] args)
+        {
+            string logText = string.Format("{0} {1}", logPrefix, format);
+            Log.Debug(logText, args);
+        }
+
+        public static void LogError(string format, params object[] args)
+        {
+            string logText = string.Format("{0} {1}", logPrefix, format);
+            Log.Error(logText, args);
+        }
+
+        #endregion
 
     }
 }

@@ -5,9 +5,9 @@
     /// </summary>
     public class BDInfoSettings {
     
-        public static bool FilterLoopingPlaylists = true;
+        public static bool FilterLoopingPlaylists = false;
         public static bool FilterShortPlaylists = true;
-        public static int FilterShortPlaylistsValue = 3600;
+        public static int FilterShortPlaylistsValue = 300;
         public static bool KeepStreamOrder = false;
 
     }

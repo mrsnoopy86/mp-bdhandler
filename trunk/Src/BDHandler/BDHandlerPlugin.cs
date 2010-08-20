@@ -40,10 +40,10 @@ namespace MediaPortal.Plugins.BDHandler {
                 if (BDHandlerCore.Init()) {
                     BDHandlerCore.Enabled = true;
                     GUIWindowManager.Receivers += new SendMessageHandler(this.OnMessage);
-                    Log.Info(BDHandlerCore.LogPrefix + "Player handling is activated.");
+                    BDHandlerCore.LogInfo("Player handling is activated.");
                 }
                 else {
-                    Log.Info(BDHandlerCore.LogPrefix + "Plugin is disabled because no suitable splitter was detected.");
+                    BDHandlerCore.LogInfo("Plugin is disabled because no suitable splitter was detected.");
                 }
             }
         }
@@ -52,7 +52,7 @@ namespace MediaPortal.Plugins.BDHandler {
             if (BDHandlerCore.Enabled) {
                 GUIWindowManager.Receivers -= OnMessage;
                 BDHandlerCore.Enabled = false;
-                Log.Info(BDHandlerCore.LogPrefix + "Player handling is deactivated.");
+                BDHandlerCore.LogInfo("Player handling is deactivated.");
             }
         }
 

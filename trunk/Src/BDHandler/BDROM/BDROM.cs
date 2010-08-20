@@ -32,6 +32,8 @@ namespace BDInfo
         public DirectoryInfo DirectoryBDJO = null;
         public DirectoryInfo DirectoryCLIPINF = null;
         public DirectoryInfo DirectoryPLAYLIST = null;
+        public DirectoryInfo DirectorySNP = null;
+        public DirectoryInfo DirectorySSIF = null;
         public DirectoryInfo DirectorySTREAM = null;
 
         public string VolumeLabel = null;
@@ -39,6 +41,8 @@ namespace BDInfo
         public bool IsBDPlus = false;
         public bool IsBDJava = false;
         public bool IsDBOX = false;
+        public bool IsPSP = false;
+        public bool Is3D = false;
 
         public Dictionary<string, TSPlaylistFile> PlaylistFiles = 
             new Dictionary<string, TSPlaylistFile>();
@@ -87,8 +91,12 @@ namespace BDInfo
                 GetDirectory("CLIPINF", DirectoryBDMV, 0);
             DirectoryPLAYLIST =
                 GetDirectory("PLAYLIST", DirectoryBDMV, 0);
+            DirectorySNP =
+                GetDirectory("SNP", DirectoryRoot, 0);
             DirectorySTREAM = 
                 GetDirectory("STREAM", DirectoryBDMV, 0);
+            DirectorySSIF =
+                GetDirectory("SSIF", DirectorySTREAM, 0);
 
             if (DirectoryCLIPINF == null
                 || DirectoryPLAYLIST == null)
@@ -120,6 +128,18 @@ namespace BDInfo
                 DirectoryBDJO.GetFiles().Length > 0)
             {
                 IsBDJava = true;
+            }
+
+            if (DirectorySNP != null &&
+                (DirectorySNP.GetFiles("*.mnv").Length > 0 || DirectorySNP.GetFiles("*.MNV").Length > 0))
+            {
+                IsPSP = true;
+            }
+
+            if (DirectorySSIF != null &&
+                DirectorySSIF.GetFiles().Length > 0)
+            {
+                Is3D = true;
             }
 
             if (File.Exists(Path.Combine(DirectoryRoot.FullName, "FilmIndex.xml")))
@@ -279,20 +299,23 @@ namespace BDInfo
             DirectoryInfo dir,
             int searchDepth)
         {
-            DirectoryInfo[] children = dir.GetDirectories();
-            foreach (DirectoryInfo child in children)
+            if (dir != null)
             {
-                if (child.Name == name)
-                {
-                    return child;
-                }
-            }
-            if (searchDepth > 0)
-            {
+                DirectoryInfo[] children = dir.GetDirectories();
                 foreach (DirectoryInfo child in children)
                 {
-                    GetDirectory(
-                        name, child, searchDepth - 1);
+                    if (child.Name == name)
+                    {
+                        return child;
+                    }
+                }
+                if (searchDepth > 0)
+                {
+                    foreach (DirectoryInfo child in children)
+                    {
+                        GetDirectory(
+                            name, child, searchDepth - 1);
+                    }
                 }
             }
             return null;
@@ -327,7 +350,7 @@ namespace BDInfo
             uint volumeFlags = new uint();
             StringBuilder volumeLabel = new StringBuilder(256);
             StringBuilder fileSystemName = new StringBuilder(256);
-            string label = dir.Name;
+            string label = "";
 
             try
             {
@@ -344,6 +367,11 @@ namespace BDInfo
                 label = volumeLabel.ToString();
             }
             catch { }
+
+            if (label.Length == 0)
+            {
+                label = dir.Name;
+            }
 
             return label;
         }

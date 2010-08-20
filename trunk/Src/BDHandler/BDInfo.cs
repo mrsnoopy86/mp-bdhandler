@@ -45,16 +45,16 @@ namespace MediaPortal.Plugins.BDHandler
                 if (title != string.Empty)
                 {
                     Title = title;
-                    Log.Debug(BDHandlerCore.LogPrefix + "Bluray Metafile='{0}', Title= '{1}'", metaFilePath, title);
+                    BDHandlerCore.LogDebug("Bluray Metafile='{0}', Title= '{1}'", metaFilePath, title);
                 }
                 else
                 {
-                    Log.Debug(BDHandlerCore.LogPrefix + "Bluray Metafile='{0}': No Title Found.", metaFilePath);
+                    BDHandlerCore.LogDebug("Bluray Metafile='{0}': No Title Found.", metaFilePath);
                 }
             }
             catch (Exception e)
             {
-                Log.Error(BDHandlerCore.LogPrefix + "Meta File Error: ", e);
+                BDHandlerCore.LogError("Meta File Error: ", e);
             }
 
         }
