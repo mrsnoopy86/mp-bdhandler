@@ -676,13 +676,19 @@ namespace BDInfo
             }
 
             TSStreamClip referenceClip = null;
-            int referenceStreamCount = 0;
+            if (StreamClips.Count > 0)
+            {
+                referenceClip = StreamClips[0];
+            }
             foreach (TSStreamClip clip in StreamClips)
             {
-                if (clip.StreamClipFile.Streams.Count > referenceStreamCount)
+                if (clip.StreamClipFile.Streams.Count > referenceClip.StreamClipFile.Streams.Count)
                 {
                     referenceClip = clip;
-                    referenceStreamCount = clip.StreamClipFile.Streams.Count;
+                }
+                else if (clip.Length > referenceClip.Length)
+                {
+                    referenceClip = clip;
                 }
                 if (AngleCount > 0)
                 {
@@ -698,11 +704,6 @@ namespace BDInfo
                         AngleClips[clip.AngleIndex - 1][clip.RelativeTimeIn] = clip;
                     }
                 }
-            }
-            if (referenceClip == null &&
-                StreamClips.Count > 0)
-            {
-                referenceClip = StreamClips[0];
             }
 
             foreach (TSStream clipStream
