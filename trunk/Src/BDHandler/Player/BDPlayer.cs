@@ -406,83 +406,85 @@ namespace MediaPortal.Plugins.BDHandler
 
                 GUIWaitCursor.Hide();
 
-                // todo: make a better filter on the playlists containing the real features
-
+                // Feature selection logic 
+                TSPlaylistFile listToPlay = null;
                 if (allPlayLists.Count == 0)
                 {
                     BDHandlerCore.LogInfo("No playlists found, bypassing dialog.", allPlayLists.Count);
                     return true;
-                }
-
-                if (allPlayLists.Count == 1)
+                } 
+                else if (allPlayLists.Count == 1)
                 {
-                    filePath = Path.Combine(bluray.DirectoryPLAYLIST.FullName, allPlayLists[0].Name);
+                    // if we have only one playlist to show just move on
                     BDHandlerCore.LogInfo("Found one valid playlist, bypassing dialog.", filePath);
-                    return true;
+                    listToPlay = allPlayLists[0];
                 }
-
-                BDHandlerCore.LogInfo("Found {0} valid playlists, showing selection dialog.", allPlayLists.Count);
-
-                // first make an educated guess about what the real features are (more than one chapter, no loops and longer than one hour)
-                List<TSPlaylistFile> playLists = allPlayLists.Where(p => (p.Chapters.Count > 1 || p.TotalLength >= MinimalFullFeatureLength) && !p.HasLoops).ToList();
-
-                // immediately show all features if the above filter yields zero results
-                if (playLists.Count == 0)
+                else
                 {
-                    playLists = allPlayLists;
-                }
-
-                bool listMore = (allPlayLists.Count > playLists.Count);
-                IDialogbox dialog = (IDialogbox)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
-                while (true)
-                {
-                    dialog.Reset();
-                    dialog.SetHeading(heading);
+                    // Show selection dialog
+                    BDHandlerCore.LogInfo("Found {0} playlists, showing selection dialog.", allPlayLists.Count);
                     
-                    int count = 1;
-                    
-                    for (int i = 0; i < playLists.Count; i++)
-                    {
-                        TSPlaylistFile playList = playLists[i];
-                        TimeSpan lengthSpan = new TimeSpan((long)(playList.TotalLength * 10000000));
-                        string length = string.Format("{0:D2}:{1:D2}:{2:D2}", lengthSpan.Hours, lengthSpan.Minutes, lengthSpan.Seconds);
-                        // todo: translation
-                        string feature = string.Format("Feature #{0}, {2} Chapter{3} ({1})", count, length, playList.Chapters.Count, (playList.Chapters.Count > 1) ? "s" : string.Empty);
-                        dialog.Add(feature);
-                        count++;
-                    }
+                    // first make an educated guess about what the real features are (more than one chapter, no loops and longer than one hour)
+                    // todo: make a better filter on the playlists containing the real features
+                    List<TSPlaylistFile> playLists = allPlayLists.Where(p => (p.Chapters.Count > 1 || p.TotalLength >= MinimalFullFeatureLength) && !p.HasLoops).ToList();
 
-                    if (listMore)
+                    // if the filter yields zero results just list all playlists 
+                    if (playLists.Count == 0)
                     {
-                        // todo: translation
-                        dialog.Add("List all features...");
-                    }
-
-                    dialog.DoModal(GUIWindowManager.ActiveWindow);
-
-                    if (dialog.SelectedId == count)
-                    {
-                        // don't filter the playlists and continue to display the dialog again
                         playLists = allPlayLists;
-                        listMore = false;
-                        continue;
-
-                    } else if (dialog.SelectedId < 1)
-                    {
-                        // user cancelled so we terug
-                        BDHandlerCore.LogDebug("User cancelled dialog.");
-                        return false;
                     }
 
-                    // end dialog
-                    break;
-                }
+                    IDialogbox dialog = (IDialogbox)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
+                    while (true)
+                    {
+                        dialog.Reset();
+                        dialog.SetHeading(heading);
 
-                TSPlaylistFile listToPlay = playLists[dialog.SelectedId - 1];
+                        int count = 1;
+
+                        for (int i = 0; i < playLists.Count; i++)
+                        {
+                            TSPlaylistFile playList = playLists[i];
+                            TimeSpan lengthSpan = new TimeSpan((long)(playList.TotalLength * 10000000));
+                            string length = string.Format("{0:D2}:{1:D2}:{2:D2}", lengthSpan.Hours, lengthSpan.Minutes, lengthSpan.Seconds);
+                            // todo: translation
+                            string feature = string.Format("Feature #{0}, {2} Chapter{3} ({1})", count, length, playList.Chapters.Count, (playList.Chapters.Count > 1) ? "s" : string.Empty);
+                            dialog.Add(feature);
+                            count++;
+                        }
+
+                        if (allPlayLists.Count > playLists.Count)
+                        {
+                            // todo: translation
+                            dialog.Add("List all features...");
+                        }
+
+                        dialog.DoModal(GUIWindowManager.ActiveWindow);
+
+                        if (dialog.SelectedId == count)
+                        {
+                            // don't filter the playlists and continue to display the dialog again
+                            playLists = allPlayLists;
+                            continue;
+
+                        }
+                        else if (dialog.SelectedId < 1)
+                        {
+                            // user cancelled so we return
+                            BDHandlerCore.LogDebug("User cancelled dialog.");
+                            return false;
+                        }
+
+                        // end dialog
+                        break;
+                    }
+
+                    listToPlay = playLists[dialog.SelectedId - 1];
+                }
 
                 // load the chapters
                 chapters = listToPlay.Chapters.ToArray();
-                BDHandlerCore.LogDebug("User Selection: Playlist={0}, Chapters={1}", listToPlay.Name, chapters.Length);
+                BDHandlerCore.LogDebug("Selected: Playlist={0}, Chapters={1}", listToPlay.Name, chapters.Length);
                 
                 // create the chosen file path (playlist)
                 filePath = Path.Combine(bluray.DirectoryPLAYLIST.FullName, listToPlay.Name);
