@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Blu-ray Handler")]
-[assembly: AssemblyDescription("Process plugin for MediaPortal to enable Blu-ray playlist support.")]
+[assembly: AssemblyDescription("Process plugin for MediaPortal to enable limited Blu-ray playback in the internal player.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Armand Pondman")]
 [assembly: AssemblyProduct("Blu-ray Handler")]
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.9.5.22")]
-[assembly: AssemblyFileVersion("0.9.5.22")]
+[assembly: AssemblyVersion("0.9.6.23")]
+[assembly: AssemblyFileVersion("0.9.6.23")]
