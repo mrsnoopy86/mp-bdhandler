@@ -1,6 +1,6 @@
 ﻿//============================================================================
 // BDInfo - Blu-ray Video and Audio Analysis Tool
-// Copyright © 2009 Cinema Squid
+// Copyright © 2010 Cinema Squid
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -171,7 +171,7 @@ namespace BDInfo
                 stream.PID, peak_bitrate, peak_bitdepth));
 #endif
             /*
-            // TODO
+            // TODO: Get THD dialnorm from metadata
             if (stream.CoreStream != null)
             {
                 TSAudioStream coreStream = (TSAudioStream)stream.CoreStream;

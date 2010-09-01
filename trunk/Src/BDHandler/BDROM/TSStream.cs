@@ -1,6 +1,6 @@
 ﻿//============================================================================
 // BDInfo - Blu-ray Video and Audio Analysis Tool
-// Copyright © 2009 Cinema Squid
+// Copyright © 2010 Cinema Squid
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,7 @@ namespace BDInfo
         MPEG1_VIDEO = 0x01,
         MPEG2_VIDEO = 0x02,
         AVC_VIDEO = 0x1b,
+        MVC_VIDEO = 0x20,
         VC1_VIDEO = 0xea,
         MPEG1_AUDIO = 0x03,
         MPEG2_AUDIO = 0x04,
@@ -173,6 +174,7 @@ namespace BDInfo
                     case TSStreamType.MPEG1_VIDEO:
                     case TSStreamType.MPEG2_VIDEO:
                     case TSStreamType.AVC_VIDEO:
+                    case TSStreamType.MVC_VIDEO:
                     case TSStreamType.VC1_VIDEO:
                         return true;
 
@@ -250,6 +252,8 @@ namespace BDInfo
                         return "MPEG-2 Video";
                     case TSStreamType.AVC_VIDEO:
                         return "MPEG-4 AVC Video";
+                    case TSStreamType.MVC_VIDEO:
+                        return "MPEG-4 MVC Video";
                     case TSStreamType.VC1_VIDEO:
                         return "VC-1 Video";
                     case TSStreamType.MPEG1_AUDIO:
@@ -303,6 +307,8 @@ namespace BDInfo
                         return "MPEG-2";
                     case TSStreamType.AVC_VIDEO:
                         return "AVC";
+                    case TSStreamType.MVC_VIDEO:
+                        return "MVC";
                     case TSStreamType.VC1_VIDEO:
                         return "VC-1";
                     case TSStreamType.MPEG1_AUDIO:
@@ -350,6 +356,8 @@ namespace BDInfo
                         return "MPEG-2";
                     case TSStreamType.AVC_VIDEO:
                         return "AVC";
+                    case TSStreamType.MVC_VIDEO:
+                        return "MVC";
                     case TSStreamType.VC1_VIDEO:
                         return "VC-1";
                     case TSStreamType.MPEG1_AUDIO:

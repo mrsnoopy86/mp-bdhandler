@@ -1,6 +1,6 @@
 ﻿//============================================================================
 // BDInfo - Blu-ray Video and Audio Analysis Tool
-// Copyright © 2009 Cinema Squid
+// Copyright © 2010 Cinema Squid
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -34,6 +34,7 @@ namespace BDInfo
         public double Length;
 
         public ulong FileSize = 0;
+        public ulong InterleavedFileSize = 0;
         public ulong PayloadBytes = 0;
         public ulong PacketCount = 0;
         public double PacketSeconds = 0;
@@ -52,8 +53,25 @@ namespace BDInfo
                 Name = streamFile.Name;
                 StreamFile = streamFile;
                 FileSize = (ulong)StreamFile.FileInfo.Length;
+                if (StreamFile.InterleavedFile != null)
+                {
+                    InterleavedFileSize = (ulong)StreamFile.InterleavedFile.FileInfo.Length;
+                }
             }
             StreamClipFile = streamClipFile;
+        }
+
+        public string DisplayName
+        {
+            get
+            {
+                if (StreamFile != null &&
+                    StreamFile.InterleavedFile != null)
+                {
+                    return StreamFile.InterleavedFile.Name;
+                }
+                return Name;
+            }
         }
 
         public ulong PacketSize

@@ -1,6 +1,6 @@
 ﻿//============================================================================
 // BDInfo - Blu-ray Video and Audio Analysis Tool
-// Copyright © 2009 Cinema Squid
+// Copyright © 2010 Cinema Squid
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -114,6 +114,10 @@ namespace BDInfo
                         clipData[streamOffset + 1];
                     switch (streamType)
                     {
+                        case TSStreamType.MVC_VIDEO:
+                            // TODO
+                            break;
+
                         case TSStreamType.AVC_VIDEO:
                         case TSStreamType.MPEG1_VIDEO:
                         case TSStreamType.MPEG2_VIDEO:
