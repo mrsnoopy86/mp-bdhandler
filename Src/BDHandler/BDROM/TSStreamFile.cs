@@ -1,6 +1,6 @@
 ﻿//============================================================================
 // BDInfo - Blu-ray Video and Audio Analysis Tool
-// Copyright © 2009 Cinema Squid
+// Copyright © 2010 Cinema Squid
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -157,6 +157,8 @@ namespace BDInfo
         public long Size = 0;
         public double Length = 0;
 
+        public TSInterleavedFile InterleavedFile = null;
+
         private Dictionary<ushort, TSStreamState> StreamStates =
             new Dictionary<ushort, TSStreamState>();
 
@@ -172,6 +174,18 @@ namespace BDInfo
         {
             FileInfo = fileInfo;
             Name = fileInfo.Name.ToUpper();
+        }
+
+        public string DisplayName
+        {
+            get
+            {
+                if (InterleavedFile != null)
+                {
+                    return InterleavedFile.Name;
+                }
+                return Name;
+            }
         }
 
         private bool ScanStream(
@@ -209,6 +223,11 @@ namespace BDInfo
 
                 case TSStreamType.AVC_VIDEO:
                     TSCodecAVC.Scan(
+                        (TSVideoStream)stream, buffer, ref streamState.StreamTag);
+                    break;
+
+                case TSStreamType.MVC_VIDEO:
+                    TSCodecMVC.Scan(
                         (TSVideoStream)stream, buffer, ref streamState.StreamTag);
                     break;
 
@@ -263,6 +282,11 @@ namespace BDInfo
                 {
                     return false;
                 }
+                if (Streams.Values.Count == 1 && 
+                    finishedStream.StreamType == TSStreamType.MVC_VIDEO)
+                {
+                    return false;
+                }
             }
             return true;
         }
@@ -280,7 +304,8 @@ namespace BDInfo
                     Streams[PID].IsVideoStream &&
                     PID != PTSPID)
                 {
-                    continue;
+                    // TODO: Why did I have this here?
+                    //continue;
                 }
                 if (StreamStates[PID].WindowPackets == 0)
                 {
@@ -410,13 +435,27 @@ namespace BDInfo
 
         public void Scan(List<TSPlaylistFile> playlists, bool isFullScan)
         {
+            if (playlists == null || playlists.Count == 0)
+            {
+                return;
+            }
+
             Playlists = playlists;
             int dataSize = 16384;
             FileStream fileStream = null;
             try
             {
+                string fileName;
+                if (InterleavedFile != null)
+                {
+                    fileName = InterleavedFile.FileInfo.FullName;
+                }
+                else
+                {
+                    fileName = FileInfo.FullName;
+                }
                 fileStream = new FileStream(
-                    FileInfo.FullName,
+                    fileName,
                     FileMode.Open,
                     FileAccess.Read,
                     FileShare.Read,
@@ -1402,7 +1441,7 @@ namespace BDInfo
             }
         }
 
-        private void CreateStream(
+        private TSStream CreateStream(
             ushort streamPID, 
             byte streamType, 
             List<TSDescriptor> streamDescriptors)
@@ -1411,6 +1450,7 @@ namespace BDInfo
 
             switch ((TSStreamType)streamType)
             {
+                case TSStreamType.MVC_VIDEO:
                 case TSStreamType.AVC_VIDEO:
                 case TSStreamType.MPEG1_VIDEO:
                 case TSStreamType.MPEG2_VIDEO:
@@ -1448,6 +1488,9 @@ namespace BDInfo
                     stream = new TSTextStream();
                 }
                 break;
+
+                default:
+                    break;
             }
 
             if (stream != null &&
@@ -1463,6 +1506,8 @@ namespace BDInfo
                 StreamDiagnostics[streamPID] =
                     new List<TSStreamDiagnostics>();
             }
+
+            return stream;
         } 
     }
 }

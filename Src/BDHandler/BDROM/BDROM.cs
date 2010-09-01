@@ -1,6 +1,6 @@
 ﻿//============================================================================
 // BDInfo - Blu-ray Video and Audio Analysis Tool
-// Copyright © 2009 Cinema Squid
+// Copyright © 2010 Cinema Squid
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -50,6 +50,8 @@ namespace BDInfo
             new Dictionary<string, TSStreamClipFile>();
         public Dictionary<string, TSStreamFile> StreamFiles = 
             new Dictionary<string, TSStreamFile>();
+        public Dictionary<string, TSInterleavedFile> InterleavedFiles =
+            new Dictionary<string, TSInterleavedFile>();
 
         private static List<string> ExcludeDirs = new List<string> { "ANY!", "AACS", "BDSVM", "ANYVM", "SLYVM" };
 
@@ -192,6 +194,20 @@ namespace BDInfo
                         file.Name.ToUpper(), new TSStreamClipFile(file));
                 }
             }
+
+            if (DirectorySSIF != null)
+            {
+                FileInfo[] files = DirectorySSIF.GetFiles("*.ssif");
+                if (files.Length == 0)
+                {
+                    files = DirectorySSIF.GetFiles("*.SSIF");
+                }
+                foreach (FileInfo file in files)
+                {
+                    InterleavedFiles.Add(
+                        file.Name.ToUpper(), new TSInterleavedFile(file));
+                }
+            }
         }
 
         public void Scan()
@@ -221,16 +237,62 @@ namespace BDInfo
                 }
             }
 
+            foreach (TSStreamFile streamFile in StreamFiles.Values)
+            {
+                string ssifName = Path.GetFileNameWithoutExtension(streamFile.Name) + ".SSIF";
+                if (InterleavedFiles.ContainsKey(ssifName))
+                {
+                    streamFile.InterleavedFile = InterleavedFiles[ssifName];
+                }
+            }
+
             TSStreamFile[] streamFiles = new TSStreamFile[StreamFiles.Count];
             StreamFiles.Values.CopyTo(streamFiles, 0);
             Array.Sort(streamFiles, CompareStreamFiles);
+
+            List<TSPlaylistFile> errorPlaylistFiles = new List<TSPlaylistFile>();
+            foreach (TSPlaylistFile playlistFile in PlaylistFiles.Values)
+            {
+                try
+                {
+                    playlistFile.Scan(StreamFiles, StreamClipFiles);
+                }
+                catch (Exception ex)
+                {
+                    errorPlaylistFiles.Add(playlistFile);
+                    if (PlaylistFileScanError != null)
+                    {
+                        if (PlaylistFileScanError(playlistFile, ex))
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    else throw ex;
+                }
+            }
 
             List<TSStreamFile> errorStreamFiles = new List<TSStreamFile>();
             foreach (TSStreamFile streamFile in streamFiles)
             {
                 try
                 {
-                    streamFile.Scan(null, false);
+                    List<TSPlaylistFile> playlists = new List<TSPlaylistFile>();
+                    foreach (TSPlaylistFile playlist in PlaylistFiles.Values)
+                    {
+                        foreach (TSStreamClip streamClip in playlist.StreamClips)
+                        {
+                            if (streamClip.Name == streamFile.Name)
+                            {
+                                playlists.Add(playlist);
+                                break;
+                            }
+                        }
+                    }
+                    streamFile.Scan(playlists, false);
                 }
                 catch (Exception ex)
                 {
@@ -250,30 +312,9 @@ namespace BDInfo
                 }
             }
 
-            List<TSPlaylistFile> errorPlaylistFiles = new List<TSPlaylistFile>();
             foreach (TSPlaylistFile playlistFile in PlaylistFiles.Values)
             {
-                try
-                {
-                    playlistFile.Scan(StreamFiles, StreamClipFiles);
-                    playlistFile.ClearBitrates();
-                }
-                catch (Exception ex)
-                {
-                    errorPlaylistFiles.Add(playlistFile);
-                    if (PlaylistFileScanError != null)
-                    {
-                        if (PlaylistFileScanError(playlistFile, ex))
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                    else throw ex;
-                }
+                playlistFile.Initialize();
             }
         }
 
@@ -330,6 +371,10 @@ namespace BDInfo
                 FileInfo[] pathFiles = directoryInfo.GetFiles();
                 foreach (FileInfo pathFile in pathFiles)
                 {
+                    if (pathFile.Extension.ToUpper() == ".SSIF")
+                    {
+                        continue;
+                    }
                     size += pathFile.Length;
                 }
 
@@ -380,6 +425,8 @@ namespace BDInfo
             TSStreamFile x,
             TSStreamFile y)
         {
+            // TODO: Use interleaved file sizes
+
             if ((x == null || x.FileInfo == null) && (y == null || y.FileInfo == null))
             {
                 return 0;

@@ -79,8 +79,10 @@
     <Compile Include="BDROM\TSCodecDTSHD.cs" />
     <Compile Include="BDROM\TSCodecLPCM.cs" />
     <Compile Include="BDROM\TSCodecMPEG2.cs" />
+    <Compile Include="BDROM\TSCodecMVC.cs" />
     <Compile Include="BDROM\TSCodecTrueHD.cs" />
     <Compile Include="BDROM\TSCodecVC1.cs" />
+    <Compile Include="BDROM\TSInterleavedFile.cs" />
     <Compile Include="BDROM\TSPlaylistFile.cs" />
     <Compile Include="BDROM\TSStream.cs" />
     <Compile Include="BDROM\TSStreamBuffer.cs" />

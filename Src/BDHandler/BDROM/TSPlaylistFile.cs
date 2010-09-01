@@ -1,6 +1,6 @@
 ﻿//============================================================================
 // BDInfo - Blu-ray Video and Audio Analysis Tool
-// Copyright © 2009 Cinema Squid
+// Copyright © 2010 Cinema Squid
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -112,6 +112,18 @@ namespace BDInfo
             return Name;
         }
 
+        public ulong InterleavedFileSize
+        {
+            get
+            {
+                ulong size = 0;
+                foreach (TSStreamClip clip in StreamClips)
+                {
+                    size += clip.InterleavedFileSize;
+                }
+                return size;
+            }
+        }
         public ulong FileSize
         {
             get
@@ -453,36 +465,12 @@ namespace BDInfo
                             this.Chapters.Add(relativeSeconds);
                         }
                     }
+                    else
+                    {
+                        // TODO: Handle other chapter types?
+                    }
                     pos += 14;
                 }
-
-                LoadStreamClips();
-
-                Dictionary<string, List<double>> clipTimes = new Dictionary<string, List<double>>();
-                foreach (TSStreamClip clip in StreamClips)
-                {
-                    if (clip.AngleIndex == 0)
-                    {
-                        if (clipTimes.ContainsKey(clip.Name))
-                        {
-                            if (clipTimes[clip.Name].Contains(clip.TimeIn))
-                            {
-                                HasLoops = true;
-                                break;
-                            }
-                            else
-                            {
-                                clipTimes[clip.Name].Add(clip.TimeIn);
-                            }
-                        }
-                        else
-                        {
-                            clipTimes[clip.Name] = new List<double> { clip.TimeIn };
-                        }
-                    }
-                }
-
-                IsInitialized = true;
             }
             finally
             {
@@ -495,6 +483,37 @@ namespace BDInfo
                     fileStream.Close();
                 }
             }
+        }
+
+        public void Initialize()
+        {
+            LoadStreamClips();
+
+            Dictionary<string, List<double>> clipTimes = new Dictionary<string, List<double>>();
+            foreach (TSStreamClip clip in StreamClips)
+            {
+                if (clip.AngleIndex == 0)
+                {
+                    if (clipTimes.ContainsKey(clip.Name))
+                    {
+                        if (clipTimes[clip.Name].Contains(clip.TimeIn))
+                        {
+                            HasLoops = true;
+                            break;
+                        }
+                        else
+                        {
+                            clipTimes[clip.Name].Add(clip.TimeIn);
+                        }
+                    }
+                    else
+                    {
+                        clipTimes[clip.Name] = new List<double> { clip.TimeIn };
+                    }
+                }
+            }
+            ClearBitrates();
+            IsInitialized = true;
         }
 
         protected TSStream CreatePlaylistStream(byte[] data, ref int pos)
@@ -542,6 +561,10 @@ namespace BDInfo
             TSStreamType streamType = (TSStreamType)data[pos++];
             switch (streamType)
             {
+                case TSStreamType.MVC_VIDEO:
+                    // TODO
+                    break;
+
                 case TSStreamType.AVC_VIDEO:
                 case TSStreamType.MPEG1_VIDEO:
                 case TSStreamType.MPEG2_VIDEO:
@@ -741,6 +764,19 @@ namespace BDInfo
 
             if (referenceClip.StreamFile != null)
             {
+                // TODO: Better way to add this in?
+                if (referenceClip.StreamFile.InterleavedFile != null &&
+                    referenceClip.StreamFile.Streams.ContainsKey(4114) &&
+                    !Streams.ContainsKey(4114))
+                {
+                    TSStream stream = referenceClip.StreamFile.Streams[4114].Clone();
+                    Streams[4114] = stream;
+                    if (stream.IsVideoStream)
+                    {
+                        VideoStreams.Add((TSVideoStream)stream);
+                    }
+                }
+
                 foreach (TSStream clipStream
                     in referenceClip.StreamFile.Streams.Values)
                 {
@@ -1156,6 +1192,8 @@ namespace BDInfo
                     return 3;
                 case TSStreamType.VC1_VIDEO:
                     return 4;
+                case TSStreamType.MVC_VIDEO:
+                    return 5;
 
                 case TSStreamType.MPEG1_AUDIO:
                     return 1;
