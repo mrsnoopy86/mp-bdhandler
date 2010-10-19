@@ -51,7 +51,8 @@ namespace MediaPortal.Plugins.BDHandler
             if (path.EndsWith(".bdmv") || path.EndsWith(".m2ts"))
             {
                 // only continue with playback if a feature was selected or the extension was m2ts.
-                if (doFeatureSelection(ref strFile) || path.EndsWith(".m2ts"))
+                bool play = doFeatureSelection(ref strFile);
+                if (play)
                 {
                     return base.Play(strFile);
                 }
