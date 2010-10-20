@@ -1,7 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MediaPortal", "MediaPortal", "{B5B961E9-1D92-4B33-B2DF-CCC5FEFEDA66}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Externals", "Externals", "{B5B961E9-1D92-4B33-B2DF-CCC5FEFEDA66}"
+	ProjectSection(SolutionItems) = preProject
+		Externals\Core.dll = Externals\Core.dll
+		Externals\DirectShowLib.dll = Externals\DirectShowLib.dll
+		Externals\Utils.dll = Externals\Utils.dll
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{6086F48F-E65E-440D-A0FF-BFB8E74D4A9D}"
 	ProjectSection(SolutionItems) = preProject
@@ -9,14 +14,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{6086F48F
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BDHandler", "BDHandler\BDHandler.csproj", "{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Externals\Core\Core.csproj", "{02FFFC1F-2555-4B99-8B01-3432D0673855}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectShowLib", "Externals\DirectShowLib\DirectShowLib.csproj", "{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaPortal.Support", "Externals\MediaPortal.Support\MediaPortal.Support.csproj", "{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils", "Externals\Utils\Utils.csproj", "{6DA0E4DF-6230-4642-98B5-E690BB6942BB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -47,88 +44,8 @@ Global
 		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.UseCaptureDefintionsRelease|Any CPU.ActiveCfg = Release|Any CPU
 		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.UseCaptureDefintionsRelease|Any CPU.Build.0 = Release|Any CPU
 		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.UseCaptureDefintionsRelease|x86.ActiveCfg = Release|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Debug|x86.ActiveCfg = Debug|x86
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Debug|x86.Build.0 = Debug|x86
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Release (Standalone)|Any CPU.ActiveCfg = Release (Standalone)|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Release (Standalone)|Any CPU.Build.0 = Release (Standalone)|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Release (Standalone)|x86.ActiveCfg = Release (Standalone)|x86
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Release (Standalone)|x86.Build.0 = Release (Standalone)|x86
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Release|Any CPU.Build.0 = Release|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Release|x86.ActiveCfg = Release|x86
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.Release|x86.Build.0 = Release|x86
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.UseCaptureCardDefinitions|Any CPU.ActiveCfg = UseCaptureCardDefinitions|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.UseCaptureCardDefinitions|Any CPU.Build.0 = UseCaptureCardDefinitions|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.UseCaptureCardDefinitions|x86.ActiveCfg = UseCaptureCardDefinitions|x86
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.UseCaptureCardDefinitions|x86.Build.0 = UseCaptureCardDefinitions|x86
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.UseCaptureDefintionsRelease|Any CPU.ActiveCfg = UseCaptureDefintionsRelease|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.UseCaptureDefintionsRelease|Any CPU.Build.0 = UseCaptureDefintionsRelease|Any CPU
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.UseCaptureDefintionsRelease|x86.ActiveCfg = UseCaptureDefintionsRelease|x86
-		{02FFFC1F-2555-4B99-8B01-3432D0673855}.UseCaptureDefintionsRelease|x86.Build.0 = UseCaptureDefintionsRelease|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Debug|x86.ActiveCfg = Debug|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Debug|x86.Build.0 = Debug|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Release (Standalone)|Any CPU.ActiveCfg = Release|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Release (Standalone)|x86.ActiveCfg = Release|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Release (Standalone)|x86.Build.0 = Release|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Release|x86.ActiveCfg = Release|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.Release|x86.Build.0 = Release|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.UseCaptureCardDefinitions|Any CPU.ActiveCfg = Release|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.UseCaptureCardDefinitions|x86.ActiveCfg = Release|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.UseCaptureCardDefinitions|x86.Build.0 = Release|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.UseCaptureDefintionsRelease|Any CPU.ActiveCfg = Release|Any CPU
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.UseCaptureDefintionsRelease|Any CPU.Build.0 = Release|Any CPU
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.UseCaptureDefintionsRelease|x86.ActiveCfg = Release|x86
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE}.UseCaptureDefintionsRelease|x86.Build.0 = Release|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Debug|x86.ActiveCfg = Debug|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Debug|x86.Build.0 = Debug|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Release (Standalone)|Any CPU.ActiveCfg = Release|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Release (Standalone)|x86.ActiveCfg = Release|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Release (Standalone)|x86.Build.0 = Release|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Release|x86.ActiveCfg = Release|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.Release|x86.Build.0 = Release|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.UseCaptureCardDefinitions|Any CPU.ActiveCfg = Release|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.UseCaptureCardDefinitions|x86.ActiveCfg = Release|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.UseCaptureCardDefinitions|x86.Build.0 = Release|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.UseCaptureDefintionsRelease|Any CPU.ActiveCfg = Release|Any CPU
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.UseCaptureDefintionsRelease|Any CPU.Build.0 = Release|Any CPU
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.UseCaptureDefintionsRelease|x86.ActiveCfg = Release|x86
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC}.UseCaptureDefintionsRelease|x86.Build.0 = Release|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Debug|x86.ActiveCfg = Debug|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Debug|x86.Build.0 = Debug|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Release (Standalone)|Any CPU.ActiveCfg = Release|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Release (Standalone)|x86.ActiveCfg = Release|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Release (Standalone)|x86.Build.0 = Release|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Release|x86.ActiveCfg = Release|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.Release|x86.Build.0 = Release|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.UseCaptureCardDefinitions|Any CPU.ActiveCfg = Release|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.UseCaptureCardDefinitions|x86.ActiveCfg = Release|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.UseCaptureCardDefinitions|x86.Build.0 = Release|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.UseCaptureDefintionsRelease|Any CPU.ActiveCfg = Release|Any CPU
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.UseCaptureDefintionsRelease|Any CPU.Build.0 = Release|Any CPU
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.UseCaptureDefintionsRelease|x86.ActiveCfg = Release|x86
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB}.UseCaptureDefintionsRelease|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{02FFFC1F-2555-4B99-8B01-3432D0673855} = {B5B961E9-1D92-4B33-B2DF-CCC5FEFEDA66}
-		{CE009BFA-5EF6-4153-B2A1-2FA79698A9AE} = {B5B961E9-1D92-4B33-B2DF-CCC5FEFEDA66}
-		{BD4A3413-C9F9-4299-BB52-ED45027EE7CC} = {B5B961E9-1D92-4B33-B2DF-CCC5FEFEDA66}
-		{6DA0E4DF-6230-4642-98B5-E690BB6942BB} = {B5B961E9-1D92-4B33-B2DF-CCC5FEFEDA66}
 	EndGlobalSection
 EndGlobal
