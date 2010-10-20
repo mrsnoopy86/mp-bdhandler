@@ -9,6 +9,7 @@
         public static bool FilterShortPlaylists = true;
         public static int FilterShortPlaylistsValue = 300;
         public static bool KeepStreamOrder = false;
+        public static bool EnableSSIF = false;
 
     }
 }

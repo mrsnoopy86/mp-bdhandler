@@ -66,7 +66,8 @@ namespace BDInfo
             get
             {
                 if (StreamFile != null &&
-                    StreamFile.InterleavedFile != null)
+                    StreamFile.InterleavedFile != null &&
+                    BDInfoSettings.EnableSSIF)
                 {
                     return StreamFile.InterleavedFile.Name;
                 }
