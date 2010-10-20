@@ -180,7 +180,8 @@ namespace BDInfo
         {
             get
             {
-                if (InterleavedFile != null)
+                if (BDInfoSettings.EnableSSIF &&
+                    InterleavedFile != null)
                 {
                     return InterleavedFile.Name;
                 }
@@ -304,8 +305,7 @@ namespace BDInfo
                     Streams[PID].IsVideoStream &&
                     PID != PTSPID)
                 {
-                    // TODO: Why did I have this here?
-                    //continue;
+                    continue;
                 }
                 if (StreamStates[PID].WindowPackets == 0)
                 {
@@ -444,9 +444,10 @@ namespace BDInfo
             int dataSize = 16384;
             FileStream fileStream = null;
             try
-            {
+            {                
                 string fileName;
-                if (InterleavedFile != null)
+                if (BDInfoSettings.EnableSSIF &&
+                    InterleavedFile != null)
                 {
                     fileName = InterleavedFile.FileInfo.FullName;
                 }

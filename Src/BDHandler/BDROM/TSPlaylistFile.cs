@@ -765,7 +765,8 @@ namespace BDInfo
             if (referenceClip.StreamFile != null)
             {
                 // TODO: Better way to add this in?
-                if (referenceClip.StreamFile.InterleavedFile != null &&
+                if (BDInfoSettings.EnableSSIF &&
+                    referenceClip.StreamFile.InterleavedFile != null &&
                     referenceClip.StreamFile.Streams.ContainsKey(4114) &&
                     !Streams.ContainsKey(4114))
                 {
