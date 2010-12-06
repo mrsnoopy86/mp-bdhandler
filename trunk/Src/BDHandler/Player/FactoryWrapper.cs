@@ -30,15 +30,24 @@ namespace MediaPortal.Plugins.BDHandler {
             if (filepath.Length < 4) {
                 string discPath = Path.Combine(filepath, @"BDMV\index.bdmv");
                 if (File.Exists(discPath))
-                    return new BDPlayer();
+                {
+                    return GetBlurayPlayer();
+                }
             }
 
             if (filepath.EndsWith(".mpls") || filepath.EndsWith(".bdmv") || (filepath.Contains(@"bdmv\stream") && filepath.EndsWith(".m2ts"))) {
-                return new BDPlayer();
+                return GetBlurayPlayer();
             }
 
             return _defaultFactory.Create(filename, type);
         }
 
+        public static BDPlayer GetBlurayPlayer()
+        {
+            BDPlayer player = new BDPlayer();
+            player.SourceFilter = BDHandlerCore.Filter;
+
+            return player;
+        }
     }
 }

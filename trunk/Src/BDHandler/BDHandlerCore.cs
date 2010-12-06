@@ -6,6 +6,7 @@ using MediaPortal.GUI.Library;
 using MediaPortal.Player;
 using MediaPortal.Profile;
 using Microsoft.Win32;
+using MediaPortal.Plugins.BDHandler.Filters;
 
 namespace MediaPortal.Plugins.BDHandler 
 {
@@ -17,24 +18,34 @@ namespace MediaPortal.Plugins.BDHandler
         private static FactoryWrapper _factory;
         private static string logPrefix = "BDHandler:";
 
+        // todo: the source filter should be configurable in the final, currently we are hardcoding it to use MpcMpegSourceFilter
+        public static MpcMpegSourceFilter Filter = new MpcMpegSourceFilter();
+
         public static bool Init() {
             try {
-                RegistryKey key = Registry.ClassesRoot.OpenSubKey(@"CLSID\{" + BDPlayer.MpcMpegSourceFilter.ToString() + @"}\InprocServer32", RegistryKeyPermissionCheck.ReadSubTree, RegistryRights.ReadKey);
+                
+                IFilter filter = Filter;
+
+                RegistryKey key = Registry.ClassesRoot.OpenSubKey(@"CLSID\{" + filter.GUID.ToString() + @"}\InprocServer32", RegistryKeyPermissionCheck.ReadSubTree, RegistryRights.ReadKey);
                 if (key != null) {
                     string codecFile = key.GetValue("", null).ToString();
-                    if (!Path.IsPathRooted(codecFile)) {
+                    if (!Path.IsPathRooted(codecFile)) 
+                    {
                         string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System);
                         codecFile = Path.Combine(systemPath, codecFile);
                     }
                     if (!File.Exists(codecFile))
+                    {
                         return false;
+                    }
 
                     FileVersionInfo info = FileVersionInfo.GetVersionInfo(codecFile);
-                    LogInfo("Detected '{0}' ({1}.{2}.{3}.{4})", BDPlayer.MpcMegSourceFilterName, info.ProductMajorPart, info.ProductMinorPart, info.ProductBuildPart, info.ProductPrivatePart);
-                    return (info.ProductBuildPart >= 1287);
+
+                    LogInfo("Detected '{0}' ({1}.{2}.{3}.{4})", filter.Name, info.ProductMajorPart, info.ProductMinorPart, info.ProductBuildPart, info.ProductPrivatePart);
+                    return (info.ProductBuildPart >= filter.RecommendedBuildNumber);
                 }
                 else {
-                    LogInfo("'{0}' was not detected on the system.", BDPlayer.MpcMegSourceFilterName);
+                    LogInfo("'{0}' was not detected on the system.", filter.Name);
                     return false;
                 }
             }
@@ -46,20 +57,23 @@ namespace MediaPortal.Plugins.BDHandler
 
         public static bool Enabled {
             get {
-                return _enabled;
+                return enabled;
             }
             set {
-                if (value && !_enabled) {
+                if (value && !enabled) {
                     if (_factory == null)
+                    {
                         _factory = new FactoryWrapper(g_Player.Factory);
+                    }
                     g_Player.Factory = _factory;
                 }
-                else if (!value && _enabled) {
+                else if (!value && enabled) 
+                {
                     g_Player.Factory = _factory.GetDefaultFactory();
                 }
-                _enabled = value;
+                enabled = value;
             }
-        } static bool _enabled = false;
+        } static bool enabled = false;
 
         public static void PlayDisc(string device) {
             bool play = true;

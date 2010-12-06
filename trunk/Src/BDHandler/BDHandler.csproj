@@ -98,6 +98,10 @@
     <Compile Include="BDROM\TSStreamClip.cs" />
     <Compile Include="BDROM\TSStreamClipFile.cs" />
     <Compile Include="BDROM\TSStreamFile.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="Filters\ISelectFilter.cs" />
+    <Compile Include="Filters\IFilter.cs" />
+    <Compile Include="Filters\MpcMpegSourceFilter.cs" />
     <Compile Include="Player\BDPlayer.cs" />
     <Compile Include="Player\FactoryWrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
