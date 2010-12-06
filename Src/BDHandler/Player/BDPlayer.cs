@@ -13,23 +13,13 @@ using MediaPortal.Player.Subtitles;
 using MediaPortal.Profile;
 using System.Text.RegularExpressions;
 using System.Globalization;
+using MediaPortal.Plugins.BDHandler.Filters;
 
 namespace MediaPortal.Plugins.BDHandler
 {
 
     public class BDPlayer : VideoPlayerVMR9
     {
-
-        // "MPC - Mpeg Source (Gabest)
-        public static Guid MpcMpegSourceFilter
-        {
-            get
-            {
-                return new Guid("{1365BE7A-C86A-473C-9A41-C0A6E82C9FA3}");
-            }
-        }
-
-        public static string MpcMegSourceFilterName = "MPC - Mpeg Source (Gabest)";
         public static double MinimalFullFeatureLength = 3000;
 
         public BDPlayer() : base(g_Player.MediaType.Video) { }
@@ -38,6 +28,21 @@ namespace MediaPortal.Plugins.BDHandler
             : base(type)
         { }
 
+        /// <summary>
+        /// Gets or sets the source filter that is to be forced when playing blurays
+        /// </summary>
+        /// <value>The source filter.</value>
+        public IFilter SourceFilter
+        {
+            get { return this.sourceFilter; }
+            set { this.sourceFilter = value; }
+        } protected IFilter sourceFilter;
+
+        /// <summary>
+        /// Plays the specified file.
+        /// </summary>
+        /// <param name="strFile">filepath</param>
+        /// <returns></returns>
         public override bool Play(string strFile)
         {
             string path = strFile.ToLower();
@@ -64,195 +69,68 @@ namespace MediaPortal.Plugins.BDHandler
         }
 
         /// <summary>
-        /// Gets the audio language from the stream (mpeg source splitter safe!)
+        /// Gets the audio language from the stream
         /// </summary>
-        /// <param name="iStream"></param>
-        /// <returns></returns>
+        /// <param name="iStream">stream index</param>
+        /// <returns>the localized audio language</returns>
         public override string AudioLanguage(int iStream)
         {
-            // first let the native method do it's work
-            string language = base.AudioLanguage(iStream);
-
-            // in case it failed do a double check for the mpeg source splitter format
-            language = Regex.Replace(language, @"^audio - ([^,]+),.+$", "$1", RegexOptions.IgnoreCase);
-
-            return language;
+            string englishName = GetAudioLanguageFromStream(iStream);
+            return Util.Utils.TranslateLanguageString(englishName);
         }
 
+        /// <summary>
+        /// Gets the audio type from the stream
+        /// </summary>
+        /// <param name="iStream">stream index</param>
+        /// <returns></returns>
         public override string AudioType(int iStream)
         {
-            string type = base.AudioType(iStream);
-            type = Regex.Replace(type, @"^audio - [^,]+,(.+)$", "$1", RegexOptions.IgnoreCase);
+            FilterStreamInfos info = FStreams.GetStreamInfos(StreamType.Audio, iStream);
 
-            return type;
-        }
-
-        /// <summary>
-        /// Gets the subtitle language from the stream (mpeg source splitter safe!)
-        /// </summary>
-        /// <param name="iStream"></param>
-        /// <returns></returns>
-        public override string SubtitleLanguage(int iStream)
-        {
-            // first let the native method do it's work
-            string language = base.SubtitleLanguage(iStream);
-
-            // in case it failed do a double check for the mpeg source splitter format
-            language = Regex.Replace(language, @"^subtitle - ([^,]+),.+$", "$1", RegexOptions.IgnoreCase);
-
-            return language;
-        }
-
-        /// <summary>
-        /// This method acts like the AnalyseStreams() method within VideoPlayerVMR7.cs in MediaPortal 1.1.0 
-        /// but the contents is exactly the same except for the fact that it only takes 
-        /// filters into account that have multiple streams (and are able to actually switch them)
-        /// this exception is marked with a region and was supplied in a patch on the forums.
-        /// Unfortunately this was the only way of overriding it.
-        /// </summary>
-        /// <returns></returns>
-        public bool ReanalyseStreams()
-        {
-            BDHandlerCore.LogDebug("Re-analysing streams to filter duplicates...");                                   
-            try
+            Guid guid = GetFilterGuidByStreamInfo(info);
+            if (guid == this.sourceFilter.GUID)
             {
-                if (FStreams == null)
+                // todo: filter dictionary lookup
+                ISelectFilter filter = this.sourceFilter as ISelectFilter;
+                if (filter != null)
                 {
-                    FStreams = new FilterStreams();
-                }
-                FStreams.DeleteAllStreams();
-                string filter;
-                IBaseFilter[] foundfilter = new IBaseFilter[2];
-                int fetched = 0;
-                IEnumFilters enumFilters;
-                graphBuilder.EnumFilters(out enumFilters);
-                if (enumFilters != null)
-                {
-                    enumFilters.Reset();
-                    while (enumFilters.Next(1, foundfilter, out fetched) == 0)
-                    {
-                        if (foundfilter[0] != null && fetched == 1)
-                        {
-
-                            IAMExtendedSeeking pEs = foundfilter[0] as IAMExtendedSeeking;
-                            if (pEs != null)
-                            {
-                                int markerCount = 0;
-                                if (pEs.get_MarkerCount(out markerCount) == 0 && markerCount > 0)
-                                {
-                                    chapters = new double[markerCount];
-                                    for (int i = 1; i <= markerCount; i++)
-                                    {
-                                        double markerTime = 0;
-                                        pEs.GetMarkerTime(i, out markerTime);
-                                        chapters[i - 1] = markerTime;
-                                    }
-                                }
-                            }
-
-                            IAMStreamSelect pStrm = foundfilter[0] as IAMStreamSelect;
-                            if (pStrm != null)
-                            {
-                                FilterInfo foundfilterinfos = new FilterInfo();
-                                foundfilter[0].QueryFilterInfo(out foundfilterinfos);
-                                filter = foundfilterinfos.achName;
-                                int cStreams = 0;
-                                pStrm.Count(out cStreams);
-
-                                #region new logic for VMR7
-
-                                if (cStreams < 2)
-                                {
-                                    BDHandlerCore.LogDebug("Skipping one stream in {0}", filter);    
-                                    continue;
-                                }
-
-                                #endregion
-
-                                //GET STREAMS
-                                for (int istream = 0; istream < cStreams; istream++)
-                                {
-                                    AMMediaType sType;
-                                    AMStreamSelectInfoFlags sFlag;
-                                    int sPDWGroup, sPLCid;
-                                    string sName;
-                                    object pppunk, ppobject;
-                                    //STREAM INFO
-                                    pStrm.Info(istream, out sType, out sFlag, out sPLCid,
-                                               out sPDWGroup, out sName, out pppunk, out ppobject);
-                                    FilterStreamInfos FSInfos = new FilterStreamInfos();
-                                    FSInfos.Current = false;
-                                    FSInfos.Filter = filter;
-                                    FSInfos.Name = sName;
-                                    FSInfos.Id = istream;
-                                    FSInfos.Type = StreamType.Unknown;
-                                    //Avoid listing ffdshow video filter's plugins amongst subtitle and audio streams.
-                                    if ((FSInfos.Filter == "ffdshow Video Decoder" || FSInfos.Filter == "ffdshow raw video filter") &&
-                                        ((sPDWGroup == 1) || (sPDWGroup == 2)))
-                                    {
-                                        FSInfos.Type = StreamType.Unknown;
-                                    }
-                                    //VIDEO
-                                    else if (sPDWGroup == 0)
-                                    {
-                                        FSInfos.Type = StreamType.Video;
-                                    }
-                                    //AUDIO
-                                    else if (sPDWGroup == 1)
-                                    {
-                                        FSInfos.Type = StreamType.Audio;
-                                    }
-                                    //SUBTITLE
-                                    else if (sPDWGroup == 2 && sName.LastIndexOf("off") == -1 && sName.LastIndexOf("Hide ") == -1 &&
-                                             sName.LastIndexOf("No ") == -1 && sName.LastIndexOf("Miscellaneous ") == -1)
-                                    {
-                                        FSInfos.Type = StreamType.Subtitle;
-                                    }
-                                    //NO SUBTITILE TAG
-                                    else if ((sPDWGroup == 2 && (sName.LastIndexOf("off") != -1 || sName.LastIndexOf("No ") != -1)) ||
-                                             (sPDWGroup == 6590033 && sName.LastIndexOf("Hide ") != -1))
-                                    {
-                                        FSInfos.Type = StreamType.Subtitle_hidden;
-                                    }
-                                    //DirectVobSub SHOW SUBTITLE TAG
-                                    else if (sPDWGroup == 6590033 && sName.LastIndexOf("Show ") != -1)
-                                    {
-                                        FSInfos.Type = StreamType.Subtitle_shown;
-                                    }
-                                    Log.Debug("VideoPlayer: FoundStreams: Type={0}; Name={1}, Filter={2}, Id={3}, PDWGroup={4}",
-                                              FSInfos.Type.ToString(), FSInfos.Name, FSInfos.Filter, FSInfos.Id.ToString(),
-                                              sPDWGroup.ToString());
-
-                                    switch (FSInfos.Type)
-                                    {
-                                        case StreamType.Unknown:
-                                            break;
-                                        case StreamType.Video:
-                                        case StreamType.Audio:
-                                        case StreamType.Subtitle:
-                                            if (FStreams.GetStreamCount(FSInfos.Type) == 0)
-                                            {
-                                                FSInfos.Current = true;
-                                                pStrm.Enable(FSInfos.Id, 0);
-                                                pStrm.Enable(FSInfos.Id, AMStreamSelectEnableFlags.Enable);
-                                            }
-                                            goto default;
-                                        default:
-                                            FStreams.AddStreamInfos(FSInfos);
-                                            break;
-                                    }
-                                }
-                            }
-                            DirectShowUtil.ReleaseComObject(foundfilter[0]);
-                        }
-                    }
-                    DirectShowUtil.ReleaseComObject(enumFilters);
+                    string type = filter.ParseAudioType(info.Name);
+                    BDHandlerCore.LogDebug("AudioType() Filter: {0}, IN: {1} OUT: {2}", filter.Name, info.Name, type);
+                    return type;
                 }
             }
-            catch { }
-            return true;
+            else
+            {
+                BDHandlerCore.LogDebug("AudioType() Filter: Unknown, GUID={0}", guid.ToString());
+            }
+
+            // if we made it this far just do the native dance
+            return base.AudioType(iStream); ;
         }
-        
+
+        /// <summary>
+        /// Gets the subtitle language from the stream
+        /// </summary>
+        /// <param name="iStream"></param>
+        /// <returns>the localized subtitle language</returns>
+        public override string SubtitleLanguage(int iStream)
+        {
+            string englishName = GetSubtitleLanguageFromStream(iStream);
+            return Util.Utils.TranslateLanguageString(englishName);
+        }
+
+        /// <summary>
+        /// Gets the subtitle name from the stream.
+        /// </summary>
+        /// <param name="iStream">the subtitle name (description)</param>
+        /// <returns></returns>
+        public override string SubtitleName(int iStream)
+        {
+            string name = GetSubtitleNameFromStream(iStream);
+            return name;
+        }
+
         /// <summary>
         /// Makes sure we build a working graph for our bluray playlist
         /// </summary>
@@ -270,100 +148,59 @@ namespace MediaPortal.Plugins.BDHandler
         /// </summary>
         protected override void OnInitialized()
         {
-
-            // Reanalyse streams to filter false ones
-            ReanalyseStreams();
-
             #region Improved Subtitle & Audio Selection
 
-            // Recheck the audio WITHOUT translating the CultureInfo
-            // this is an additional check that should be put into 
-            // the VideoPlayerVMR7.cs (line 371) but as long as we are overriding
-            // here we can fix it ourselves
-
-            // if there is only one audiostream there's no need to do this extra logic
-            if (AudioStreams > 1)
+            // AUDIO
+            CultureInfo audioCulture = GetCultureInfoFromSettings("movieplayer", "audiolanguage");
+            string selectedAudioLanguage = string.Empty;
+            int audioStreams = AudioStreams;
+            for (int i = 0; i < audioStreams; i++)
             {
-                CultureInfo ci = null;
-                using (Settings xmlreader = new MPSettings())
+                string language = GetAudioLanguageFromStream(i);
+                if (audioCulture.Matches(language))
                 {
-                    try
-                    {
-                        ci = new CultureInfo(xmlreader.GetValueAsString("movieplayer", "audiolanguage", defaultLanguageCulture));
-                    }
-                    catch (Exception ex)
-                    {
-                        ci = new CultureInfo(defaultLanguageCulture);
-                        BDHandlerCore.LogError("unable to build CultureInfo - {0}", ex);
-                    }
-                }
-
-                for (int i = 0; i < AudioStreams; i++)
-                {
-                    string language = AudioLanguage(i);
-                    if (ci.EnglishName.Equals(language, StringComparison.OrdinalIgnoreCase) ||
-                        ci.TwoLetterISOLanguageName.Equals(language, StringComparison.OrdinalIgnoreCase) ||
-                        ci.ThreeLetterISOLanguageName.Equals(language, StringComparison.OrdinalIgnoreCase) ||
-                        ci.ThreeLetterWindowsLanguageName.Equals(language, StringComparison.OrdinalIgnoreCase))
-                    {
-                        CurrentAudioStream = i;
-                        BDHandlerCore.LogInfo("Selected active audio track language: {0} ({1})", ci.EnglishName, i);
-                        break;
-                    }
+                    CurrentAudioStream = i;
+                    selectedAudioLanguage = language;
+                    BDHandlerCore.LogInfo("Selected active audio track language: {0} ({1})", audioCulture.EnglishName, i);
+                    break;
                 }
             }
 
-            // if there is only one subtitle stream there's no need to do this extra logic
-            if (SubtitleStreams > 1)
+            // SUBTITLES
+            CultureInfo subtitleCulture = GetCultureInfoFromSettings("subtitles", "language");
+            int subtitleStreams = SubtitleStreams;
+            
+            for (int i = 0; i < subtitleStreams; i++)
             {
-                CultureInfo ci = null;
-                using (Settings xmlreader = new MPSettings())
+                string language = GetSubtitleLanguageFromStream(i);
+                if (subtitleCulture.Matches(language))
                 {
-                    try
-                    {
-                        ci = new CultureInfo(xmlreader.GetValueAsString("subtitles", "language", defaultLanguageCulture));
-                    }
-                    catch (Exception ex)
-                    {
-                        ci = new CultureInfo(defaultLanguageCulture);
-                        BDHandlerCore.LogError("unable to build CultureInfo - {0}", ex);
-                    }
-                }
+                    // set the current subtitle stream
+                    CurrentSubtitleStream = i;
 
-                for (int i = 0; i < SubtitleStreams; i++)
-                {
-                    string subtitleLanguage = SubtitleLanguage(i);
-                    if (ci.EnglishName.Equals(subtitleLanguage, StringComparison.OrdinalIgnoreCase) ||
-                        ci.TwoLetterISOLanguageName.Equals(subtitleLanguage, StringComparison.OrdinalIgnoreCase) ||
-                        ci.ThreeLetterISOLanguageName.Equals(subtitleLanguage, StringComparison.OrdinalIgnoreCase) ||
-                        ci.ThreeLetterWindowsLanguageName.Equals(subtitleLanguage, StringComparison.OrdinalIgnoreCase))
+                    if (selectedAudioLanguage != string.Empty && subtitleCulture.Matches(selectedAudioLanguage))
                     {
-                        BDHandlerCore.LogInfo("Selected active subtitle track language: {0} ({1})", ci.EnglishName, i);
-                        CurrentSubtitleStream = i;
-                        break;
+                        // the languages of both audio and subtitles are the same so there's no need to show the subtitle
+                        // todo: evaluate through user experience
+                        EnableSubtitle = false;
+                        BDHandlerCore.LogDebug("Disabling subtitles because the audio language is the same.");
                     }
+                    else
+                    {
+                        // enable the subtitles
+                        BDHandlerCore.LogInfo("Selected active subtitle track language: {0} ({1})", subtitleCulture.EnglishName, i);
+                        EnableSubtitle = true;
+                    }
+                    break;
                 }
             }
 
-            // now check whether we should show the subtitles
-            if (EnableSubtitle && SubtitleStreams > 0 && AudioStreams > 0)
-            {
-                if (SubtitleLanguage(CurrentSubtitleStream).Equals(AudioLanguage(CurrentAudioStream), StringComparison.OrdinalIgnoreCase))
-                {
-                    // the languages of both audio and subtitles are the same so there's no need to show the subtitle
-                    EnableSubtitle = false;
-
-                    BDHandlerCore.LogDebug("Disabling subtitles because the audio language is the same.");
-                }
-            }
 
             #endregion
 
             // call the base OnInitialized method
             base.OnInitialized();
         }
-
-        delegate BDInfo ScanProcess(string path);
 
         /// <summary>
         /// Scans a bluray folder and returns a BDInfo object
@@ -387,7 +224,7 @@ namespace MediaPortal.Plugins.BDHandler
         {
             try
             {
-                ScanProcess scanner = new ScanProcess(scanWorker);
+                Func<string, BDInfo> scanner = scanWorker;
                 IAsyncResult result = scanner.BeginInvoke(filePath, null, scanner);
 
                 // Show the wait cursor during scan
@@ -566,13 +403,13 @@ namespace MediaPortal.Plugins.BDHandler
                 Vmr9.Enable(false);
 
                 // load the source filter                
-                IBaseFilter source = DirectShowUtil.AddFilterToGraph(graphBuilder, MpcMegSourceFilterName);
+                IBaseFilter source = DirectShowUtil.AddFilterToGraph(graphBuilder, this.sourceFilter.Name);
 
                 // check if it's available
                 if (source == null)
                 {
-                    Error.SetError("Unable to load source filter", "Please register filter: " + MpcMegSourceFilterName);
-                    BDHandlerCore.LogError("Unable to load DirectShowFilter: {0}", MpcMegSourceFilterName);
+                    Error.SetError("Unable to load source filter", "Please register filter: " + this.sourceFilter.Name);
+                    BDHandlerCore.LogError("Unable to load DirectShowFilter: {0}", this.sourceFilter.Name);
                     return false;
                 }
 
@@ -674,5 +511,162 @@ namespace MediaPortal.Plugins.BDHandler
             }
         }
 
+        #region Utility
+
+        /// <summary>
+        /// Gets the filter GUID by stream info.
+        /// </summary>
+        /// <param name="info">FilterStreamInfos struct</param>
+        /// <returns></returns>
+        protected virtual Guid GetFilterGuidByStreamInfo(FilterStreamInfos info) 
+        {
+            Guid guid = Guid.Empty;
+
+            IBaseFilter foundfilter = DirectShowUtil.GetFilterByName(graphBuilder, info.Filter);
+            if (foundfilter != null)
+            {
+                foundfilter.GetClassID(out guid);
+
+                // release object
+                DirectShowUtil.ReleaseComObject(foundfilter);
+            }
+
+            return guid;
+        }
+
+        /// <summary>
+        /// Gets the culture info from configurationsettings.
+        /// </summary>
+        /// <param name="section">The section name.</param>
+        /// <param name="entry">The entry name.</param>
+        /// <returns></returns>
+        public virtual CultureInfo GetCultureInfoFromSettings(string section, string entry)
+        {
+            CultureInfo culture = null;
+            using (Settings xmlreader = new MPSettings())
+            {
+                try
+                {
+                    culture = CultureInfo.GetCultureInfo(xmlreader.GetValueAsString(section, entry, defaultLanguageCulture));
+                }
+                catch (Exception ex)
+                {
+                    culture = CultureInfo.GetCultureInfo(defaultLanguageCulture);
+                    BDHandlerCore.LogError("unable to build CultureInfo - {0}", ex);
+                }
+            }
+
+            return culture;
+        }
+
+        /// <summary>
+        /// Gets the audio language from the stream
+        /// </summary>
+        /// <param name="iStream">stream index</param>
+        /// <returns>language string formatted as english name</returns>
+        public virtual string GetAudioLanguageFromStream(int iStream)
+        {
+            FilterStreamInfos info = FStreams.GetStreamInfos(StreamType.Audio, iStream);
+
+            if (info.LCID > 0)
+            {
+                string lang = GetEnglishNameByLCID(info.LCID);
+                BDHandlerCore.LogDebug("AudioLanguage() LCID: {0}, OUT: {1}", info.LCID, lang);
+            }
+
+            Guid guid = GetFilterGuidByStreamInfo(info);
+            if (guid == this.sourceFilter.GUID)
+            {
+                // todo: filter dictionary lookup
+                ISelectFilter filter = this.sourceFilter as ISelectFilter;
+                if (filter != null)
+                {
+                    string language = filter.ParseAudioLanguage(info.Name);
+                    BDHandlerCore.LogDebug("AudioLanguage() Filter: {0}, IN: {1} OUT: {2}", filter.Name, info.Name, language);
+                    return language;
+                }
+            }
+            else
+            {
+                BDHandlerCore.LogDebug("AudioLanguage() Filter: Unknown, GUID={0}", guid.ToString());
+            }
+
+            // if we made it this far just do the native dance
+            return base.AudioLanguage(iStream);
+        }
+
+        /// <summary>
+        /// Gets the subtitle language from the stream
+        /// </summary>
+        /// <param name="iStream"></param>
+        /// <returns>language string formatted as english name</returns>
+        public virtual string GetSubtitleLanguageFromStream(int iStream)
+        {
+            FilterStreamInfos info = FStreams.GetStreamInfos(StreamType.Subtitle, iStream);
+
+            if (info.LCID > 0)
+            {
+                return GetEnglishNameByLCID(info.LCID);
+            }
+
+            Guid guid = GetFilterGuidByStreamInfo(info);
+            if (guid == this.sourceFilter.GUID)
+            {
+                // todo: filter dictionary lookup
+                ISelectFilter filter = this.sourceFilter as ISelectFilter;
+                if (filter != null)
+                {
+                    string language = filter.ParseSubtitleLanguage(info.Name);
+                    BDHandlerCore.LogDebug("SubtitleLanguage() Filter: {0}, IN: {1} OUT: {2}", filter.Name, info.Name, language);
+                    return language;
+                }
+            }
+            else
+            {
+                BDHandlerCore.LogDebug("SubtitleLanguage() Filter: Unknown, GUID={0}", guid.ToString());
+            }
+
+            return base.SubtitleLanguage(iStream);
+        }
+
+        /// <summary>
+        /// Gets the subtitle name from the stream
+        /// </summary>
+        /// <param name="iStream"></param>
+        /// <returns></returns>
+        public virtual string GetSubtitleNameFromStream(int iStream)
+        {
+            FilterStreamInfos info = FStreams.GetStreamInfos(StreamType.Subtitle, iStream);
+
+            Guid guid = GetFilterGuidByStreamInfo(info);
+            if (guid == this.sourceFilter.GUID)
+            {
+                ISelectFilter filter = this.sourceFilter as ISelectFilter;
+                if (filter != null)
+                {
+                    string name = filter.ParseSubtitleName(info.Name);
+                    BDHandlerCore.LogDebug("SubtitleName() Filter: {0}, IN: {1} OUT: {2}", filter.Name, info.Name, name);
+                    return name;
+                }
+            }
+            else
+            {
+                BDHandlerCore.LogDebug("SubtitleName() Filter: Unknown, GUID={0}", guid.ToString());
+            }
+
+            return base.SubtitleLanguage(iStream);
+        }
+
+        /// <summary>
+        /// Gets the english name by LCID.
+        /// </summary>
+        /// <param name="lcid">The lcid.</param>
+        /// <returns></returns>
+        public static string GetEnglishNameByLCID(int lcid)
+        {
+            return CultureInfo.GetCultureInfo(lcid).EnglishName.Split('(')[0].Trim();
+        }
+
+        #endregion
     }
 }
