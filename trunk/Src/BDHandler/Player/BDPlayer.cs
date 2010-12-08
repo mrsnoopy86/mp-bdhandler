@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using BDInfo;
 using DirectShowLib;
@@ -10,23 +11,31 @@ using MediaPortal.Configuration;
 using MediaPortal.GUI.Library;
 using MediaPortal.Player;
 using MediaPortal.Player.Subtitles;
-using MediaPortal.Profile;
-using System.Text.RegularExpressions;
-using System.Globalization;
 using MediaPortal.Plugins.BDHandler.Filters;
+using MediaPortal.Profile;
 
-namespace MediaPortal.Plugins.BDHandler
+namespace MediaPortal.Plugins.BDHandler.Player
 {
-
-    public class BDPlayer : VideoPlayerVMR9
+    /// <summary>
+    /// Special player class that handles blu-ray playback
+    /// </summary>
+    public class BDPlayer : VideoPlayer
     {
+
+        /// <summary>
+        /// The minimal feature length that should be taken into account
+        /// </summary>
         public static double MinimalFullFeatureLength = 3000;
+        
+        /// <summary>
+        /// Holds the relevant BDInfo instance after a scan
+        /// </summary>
+        protected BDInfo currentMediaInfo;
 
-        public BDPlayer() : base(g_Player.MediaType.Video) { }
-
-        public BDPlayer(g_Player.MediaType type)
-            : base(type)
-        { }
+        /// <summary>
+        /// Holds the relevant playlist after feature selection
+        /// </summary>
+        protected TSPlaylistFile currentPlaylistFile;
 
         /// <summary>
         /// Gets or sets the source filter that is to be forced when playing blurays
@@ -69,323 +78,19 @@ namespace MediaPortal.Plugins.BDHandler
         }
 
         /// <summary>
-        /// Gets the audio language from the stream
-        /// </summary>
-        /// <param name="iStream">stream index</param>
-        /// <returns>the localized audio language</returns>
-        public override string AudioLanguage(int iStream)
-        {
-            string englishName = GetAudioLanguageFromStream(iStream);
-            return Util.Utils.TranslateLanguageString(englishName);
-        }
-
-        /// <summary>
-        /// Gets the audio type from the stream
-        /// </summary>
-        /// <param name="iStream">stream index</param>
-        /// <returns></returns>
-        public override string AudioType(int iStream)
-        {
-            FilterStreamInfos info = FStreams.GetStreamInfos(StreamType.Audio, iStream);
-
-            Guid guid = GetFilterGuidByStreamInfo(info);
-            if (guid == this.sourceFilter.GUID)
-            {
-                // todo: filter dictionary lookup
-                ISelectFilter filter = this.sourceFilter as ISelectFilter;
-                if (filter != null)
-                {
-                    string type = filter.ParseAudioType(info.Name);
-                    BDHandlerCore.LogDebug("AudioType() Filter: {0}, IN: {1} OUT: {2}", filter.Name, info.Name, type);
-                    return type;
-                }
-            }
-            else
-            {
-                BDHandlerCore.LogDebug("AudioType() Filter: Unknown, GUID={0}", guid.ToString());
-            }
-
-            // if we made it this far just do the native dance
-            return base.AudioType(iStream); ;
-        }
-
-        /// <summary>
-        /// Gets the subtitle language from the stream
-        /// </summary>
-        /// <param name="iStream"></param>
-        /// <returns>the localized subtitle language</returns>
-        public override string SubtitleLanguage(int iStream)
-        {
-            string englishName = GetSubtitleLanguageFromStream(iStream);
-            return Util.Utils.TranslateLanguageString(englishName);
-        }
-
-        /// <summary>
-        /// Gets the subtitle name from the stream.
-        /// </summary>
-        /// <param name="iStream">the subtitle name (description)</param>
-        /// <returns></returns>
-        public override string SubtitleName(int iStream)
-        {
-            string name = GetSubtitleNameFromStream(iStream);
-            return name;
-        }
-
-        /// <summary>
-        /// Makes sure we build a working graph for our bluray playlist
+        /// Specifies if custom graph should be used.
         /// </summary>
         /// <returns></returns>
-        protected override bool GetInterfaces()
+        protected override bool UseCustomGraph()
         {
-            if (CurrentFile.ToLower().EndsWith(".mpls"))
-                return renderGraph();
-
-            return base.GetInterfaces();
-        }
-
-        /// <summary>
-        /// Overriden OnInitialized that to improve audio/subtitle selection
-        /// </summary>
-        protected override void OnInitialized()
-        {
-            #region Improved Subtitle & Audio Selection
-
-            // AUDIO
-            CultureInfo audioCulture = GetCultureInfoFromSettings("movieplayer", "audiolanguage");
-            string selectedAudioLanguage = string.Empty;
-            int audioStreams = AudioStreams;
-            for (int i = 0; i < audioStreams; i++)
-            {
-                string language = GetAudioLanguageFromStream(i);
-                if (audioCulture.Matches(language))
-                {
-                    CurrentAudioStream = i;
-                    selectedAudioLanguage = language;
-                    BDHandlerCore.LogInfo("Selected active audio track language: {0} ({1})", audioCulture.EnglishName, i);
-                    break;
-                }
-            }
-
-            // SUBTITLES
-            CultureInfo subtitleCulture = GetCultureInfoFromSettings("subtitles", "language");
-            int subtitleStreams = SubtitleStreams;
-            
-            for (int i = 0; i < subtitleStreams; i++)
-            {
-                string language = GetSubtitleLanguageFromStream(i);
-                if (subtitleCulture.Matches(language))
-                {
-                    // set the current subtitle stream
-                    CurrentSubtitleStream = i;
-
-                    if (selectedAudioLanguage != string.Empty && subtitleCulture.Matches(selectedAudioLanguage))
-                    {
-                        // the languages of both audio and subtitles are the same so there's no need to show the subtitle
-                        // todo: evaluate through user experience
-                        EnableSubtitle = false;
-                        BDHandlerCore.LogDebug("Disabling subtitles because the audio language is the same.");
-                    }
-                    else
-                    {
-                        // enable the subtitles
-                        BDHandlerCore.LogInfo("Selected active subtitle track language: {0} ({1})", subtitleCulture.EnglishName, i);
-                        EnableSubtitle = true;
-                    }
-                    break;
-                }
-            }
-
-
-            #endregion
-
-            // call the base OnInitialized method
-            base.OnInitialized();
-        }
-
-        /// <summary>
-        /// Scans a bluray folder and returns a BDInfo object
-        /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
-        private BDInfo scanWorker(string path)
-        {
-            BDHandlerCore.LogInfo("Scanning bluray structure: {0}", path);
-            BDInfo bluray = new BDInfo(path.ToUpper());
-            bluray.Scan();
-            return bluray;
-        }
-
-        /// <summary>
-        /// Returns wether a choice was made and changes the file path
-        /// </summary>
-        /// <param name="filePath"></param>
-        /// <returns>True if playback should continue, False if user cancelled.</returns>
-        private bool doFeatureSelection(ref string filePath)
-        {
-            try
-            {
-                Func<string, BDInfo> scanner = scanWorker;
-                IAsyncResult result = scanner.BeginInvoke(filePath, null, scanner);
-
-                // Show the wait cursor during scan
-                GUIWaitCursor.Init();
-                GUIWaitCursor.Show();
-                while (result.IsCompleted == false)
-                {
-                    GUIWindowManager.Process();
-                    Thread.Sleep(100);
-                }
-
-                BDInfo bluray = scanner.EndInvoke(result);
-                List<TSPlaylistFile> allPlayLists = bluray.PlaylistFiles.Values.Where(p => p.IsValid).OrderByDescending(p => p.TotalLength).Distinct().ToList();
-
-                // this will be the title of the dialog, we strip the dialog of weird characters that might wreck the font engine.
-                string heading = (bluray.Title != string.Empty) ? Regex.Replace(bluray.Title, @"[^\w\s\*\%\$\+\,\.\-\:\!\?\(\)]", "").Trim() : "Bluray: Select Feature";                
-
-                GUIWaitCursor.Hide();
-
-                // Feature selection logic 
-                TSPlaylistFile listToPlay = null;
-                if (allPlayLists.Count == 0)
-                {
-                    BDHandlerCore.LogInfo("No playlists found, bypassing dialog.", allPlayLists.Count);
-                    return true;
-                } 
-                else if (allPlayLists.Count == 1)
-                {
-                    // if we have only one playlist to show just move on
-                    BDHandlerCore.LogInfo("Found one valid playlist, bypassing dialog.", filePath);
-                    listToPlay = allPlayLists[0];
-                }
-                else
-                {
-                    // Show selection dialog
-                    BDHandlerCore.LogInfo("Found {0} playlists, showing selection dialog.", allPlayLists.Count);
-                    
-                    // first make an educated guess about what the real features are (more than one chapter, no loops and longer than one hour)
-                    // todo: make a better filter on the playlists containing the real features
-                    List<TSPlaylistFile> playLists = allPlayLists.Where(p => (p.Chapters.Count > 1 || p.TotalLength >= MinimalFullFeatureLength) && !p.HasLoops).ToList();
-
-                    // if the filter yields zero results just list all playlists 
-                    if (playLists.Count == 0)
-                    {
-                        playLists = allPlayLists;
-                    }
-
-                    IDialogbox dialog = (IDialogbox)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
-                    while (true)
-                    {
-                        dialog.Reset();
-                        dialog.SetHeading(heading);
-
-                        int count = 1;
-
-                        for (int i = 0; i < playLists.Count; i++)
-                        {
-                            TSPlaylistFile playList = playLists[i];
-                            TimeSpan lengthSpan = new TimeSpan((long)(playList.TotalLength * 10000000));
-                            string length = string.Format("{0:D2}:{1:D2}:{2:D2}", lengthSpan.Hours, lengthSpan.Minutes, lengthSpan.Seconds);
-                            // todo: translation
-                            string feature = string.Format("Feature #{0}, {2} Chapter{3} ({1})", count, length, playList.Chapters.Count, (playList.Chapters.Count > 1) ? "s" : string.Empty);
-                            dialog.Add(feature);
-                            count++;
-                        }
-
-                        if (allPlayLists.Count > playLists.Count)
-                        {
-                            // todo: translation
-                            dialog.Add("List all features...");
-                        }
-
-                        dialog.DoModal(GUIWindowManager.ActiveWindow);
-
-                        if (dialog.SelectedId == count)
-                        {
-                            // don't filter the playlists and continue to display the dialog again
-                            playLists = allPlayLists;
-                            continue;
-
-                        }
-                        else if (dialog.SelectedId < 1)
-                        {
-                            // user cancelled so we return
-                            BDHandlerCore.LogDebug("User cancelled dialog.");
-                            return false;
-                        }
-
-                        // end dialog
-                        break;
-                    }
-
-                    listToPlay = playLists[dialog.SelectedId - 1];
-                }
-
-                // load the chapters
-                chapters = listToPlay.Chapters.ToArray();
-                BDHandlerCore.LogDebug("Selected: Playlist={0}, Chapters={1}", listToPlay.Name, chapters.Length);
-                
-                // create the chosen file path (playlist)
-                filePath = Path.Combine(bluray.DirectoryPLAYLIST.FullName, listToPlay.Name);
-
-                #region Refresh Rate Changer
-
-                // Because g_player reads the framerate from the iniating media path we need to
-                // do a re-check of the framerate after the user has chosen the playlist. We do
-                // this by grabbing the framerate from the first video stream in the playlist as
-                // this data was already scanned.
-                using (Settings xmlreader = new MPSettings())
-                {
-                    bool enabled = xmlreader.GetValueAsBool("general", "autochangerefreshrate", false);
-                    if (enabled)
-                    {
-                        TSFrameRate framerate = listToPlay.VideoStreams[0].FrameRate;
-                        if (framerate != TSFrameRate.Unknown)
-                        {
-                            double fps = 0;
-                            switch (framerate)
-                            {
-                                case TSFrameRate.FRAMERATE_59_94:
-                                    fps = 59.94;
-                                    break;
-                                case TSFrameRate.FRAMERATE_50:
-                                    fps = 50;
-                                    break;
-                                case TSFrameRate.FRAMERATE_29_97:
-                                    fps = 29.97;
-                                    break;
-                                case TSFrameRate.FRAMERATE_25:
-                                    fps = 25;
-                                    break;
-                                case TSFrameRate.FRAMERATE_24:
-                                    fps = 24;
-                                    break;
-                                case TSFrameRate.FRAMERATE_23_976:
-                                    fps = 23.976;
-                                    break;
-                            }
-
-                            BDHandlerCore.LogDebug("Initiating refresh rate change: {0}", fps);
-                            RefreshRateChanger.SetRefreshRateBasedOnFPS(fps, filePath, RefreshRateChanger.MediaType.Video);
-                        }
-                    }
-                }
-
-                #endregion
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                BDHandlerCore.LogError("Exception while reading bluray structure {0} {1}", e.Message, e.StackTrace);
-                return true;
-            }
+            return (CurrentFile.ToLower().EndsWith(".mpls"));
         }
 
         /// <summary>
         /// Renders a graph that can playback mpls files
         /// </summary>
         /// <returns></returns>
-        private bool renderGraph()
+        protected override bool RenderCustomGraph()
         {
             try
             {
@@ -511,162 +216,191 @@ namespace MediaPortal.Plugins.BDHandler
             }
         }
 
-        #region Utility
-
         /// <summary>
-        /// Gets the filter GUID by stream info.
+        /// Scans a bluray folder and returns a BDInfo object
         /// </summary>
-        /// <param name="info">FilterStreamInfos struct</param>
+        /// <param name="path"></param>
         /// <returns></returns>
-        protected virtual Guid GetFilterGuidByStreamInfo(FilterStreamInfos info) 
+        private BDInfo scanWorker(string path)
         {
-            Guid guid = Guid.Empty;
-
-            IBaseFilter foundfilter = DirectShowUtil.GetFilterByName(graphBuilder, info.Filter);
-            if (foundfilter != null)
-            {
-                foundfilter.GetClassID(out guid);
-
-                // release object
-                DirectShowUtil.ReleaseComObject(foundfilter);
-            }
-
-            return guid;
+            BDHandlerCore.LogInfo("Scanning bluray structure: {0}", path);
+            BDInfo bluray = new BDInfo(path.ToUpper());
+            bluray.Scan();
+            return bluray;
         }
 
         /// <summary>
-        /// Gets the culture info from configurationsettings.
+        /// Returns wether a choice was made and changes the file path
         /// </summary>
-        /// <param name="section">The section name.</param>
-        /// <param name="entry">The entry name.</param>
-        /// <returns></returns>
-        public virtual CultureInfo GetCultureInfoFromSettings(string section, string entry)
+        /// <param name="filePath"></param>
+        /// <returns>True if playback should continue, False if user cancelled.</returns>
+        private bool doFeatureSelection(ref string filePath)
         {
-            CultureInfo culture = null;
-            using (Settings xmlreader = new MPSettings())
+            try
             {
-                try
-                {
-                    culture = CultureInfo.GetCultureInfo(xmlreader.GetValueAsString(section, entry, defaultLanguageCulture));
-                }
-                catch (Exception ex)
-                {
-                    culture = CultureInfo.GetCultureInfo(defaultLanguageCulture);
-                    BDHandlerCore.LogError("unable to build CultureInfo - {0}", ex);
-                }
-            }
+                Func<string, BDInfo> scanner = scanWorker;
+                IAsyncResult result = scanner.BeginInvoke(filePath, null, scanner);
 
-            return culture;
+                // Show the wait cursor during scan
+                GUIWaitCursor.Init();
+                GUIWaitCursor.Show();
+                while (result.IsCompleted == false)
+                {
+                    GUIWindowManager.Process();
+                    Thread.Sleep(100);
+                }
+
+                BDInfo bluray = scanner.EndInvoke(result);
+
+                // Put the bluray info into a member variable (for later use)
+                currentMediaInfo = bluray;
+
+                List<TSPlaylistFile> allPlayLists = bluray.PlaylistFiles.Values.Where(p => p.IsValid).OrderByDescending(p => p.TotalLength).Distinct().ToList();
+
+                // this will be the title of the dialog, we strip the dialog of weird characters that might wreck the font engine.
+                string heading = (bluray.Title != string.Empty) ? Regex.Replace(bluray.Title, @"[^\w\s\*\%\$\+\,\.\-\:\!\?\(\)]", "").Trim() : "Bluray: Select Feature";
+
+                GUIWaitCursor.Hide();
+
+                // Feature selection logic 
+                TSPlaylistFile listToPlay = null;
+                if (allPlayLists.Count == 0)
+                {
+                    BDHandlerCore.LogInfo("No playlists found, bypassing dialog.", allPlayLists.Count);
+                    return true;
+                }
+                else if (allPlayLists.Count == 1)
+                {
+                    // if we have only one playlist to show just move on
+                    BDHandlerCore.LogInfo("Found one valid playlist, bypassing dialog.", filePath);
+                    listToPlay = allPlayLists[0];
+                }
+                else
+                {
+                    // Show selection dialog
+                    BDHandlerCore.LogInfo("Found {0} playlists, showing selection dialog.", allPlayLists.Count);
+
+                    // first make an educated guess about what the real features are (more than one chapter, no loops and longer than one hour)
+                    // todo: make a better filter on the playlists containing the real features
+                    List<TSPlaylistFile> playLists = allPlayLists.Where(p => (p.Chapters.Count > 1 || p.TotalLength >= MinimalFullFeatureLength) && !p.HasLoops).ToList();
+
+                    // if the filter yields zero results just list all playlists 
+                    if (playLists.Count == 0)
+                    {
+                        playLists = allPlayLists;
+                    }
+
+                    IDialogbox dialog = (IDialogbox)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
+                    while (true)
+                    {
+                        dialog.Reset();
+                        dialog.SetHeading(heading);
+
+                        int count = 1;
+
+                        for (int i = 0; i < playLists.Count; i++)
+                        {
+                            TSPlaylistFile playList = playLists[i];
+                            TimeSpan lengthSpan = new TimeSpan((long)(playList.TotalLength * 10000000));
+                            string length = string.Format("{0:D2}:{1:D2}:{2:D2}", lengthSpan.Hours, lengthSpan.Minutes, lengthSpan.Seconds);
+                            // todo: translation
+                            string feature = string.Format("Feature #{0}, {2} Chapter{3} ({1})", count, length, playList.Chapters.Count, (playList.Chapters.Count > 1) ? "s" : string.Empty);
+                            dialog.Add(feature);
+                            count++;
+                        }
+
+                        if (allPlayLists.Count > playLists.Count)
+                        {
+                            // todo: translation
+                            dialog.Add("List all features...");
+                        }
+
+                        dialog.DoModal(GUIWindowManager.ActiveWindow);
+
+                        if (dialog.SelectedId == count)
+                        {
+                            // don't filter the playlists and continue to display the dialog again
+                            playLists = allPlayLists;
+                            continue;
+
+                        }
+                        else if (dialog.SelectedId < 1)
+                        {
+                            // user cancelled so we return
+                            BDHandlerCore.LogDebug("User cancelled dialog.");
+                            return false;
+                        }
+
+                        // end dialog
+                        break;
+                    }
+
+                    listToPlay = playLists[dialog.SelectedId - 1];
+                }
+
+                // put the choosen playlist into our member variable for later use
+                currentPlaylistFile = listToPlay;
+
+                // load the chapters
+                chapters = listToPlay.Chapters.ToArray();
+                BDHandlerCore.LogDebug("Selected: Playlist={0}, Chapters={1}", listToPlay.Name, chapters.Length);
+
+                // create the chosen file path (playlist)
+                filePath = Path.Combine(bluray.DirectoryPLAYLIST.FullName, listToPlay.Name);
+
+                #region Refresh Rate Changer
+
+                // Because g_player reads the framerate from the iniating media path we need to
+                // do a re-check of the framerate after the user has chosen the playlist. We do
+                // this by grabbing the framerate from the first video stream in the playlist as
+                // this data was already scanned.
+                using (Settings xmlreader = new MPSettings())
+                {
+                    bool enabled = xmlreader.GetValueAsBool("general", "autochangerefreshrate", false);
+                    if (enabled)
+                    {
+                        TSFrameRate framerate = listToPlay.VideoStreams[0].FrameRate;
+                        if (framerate != TSFrameRate.Unknown)
+                        {
+                            double fps = 0;
+                            switch (framerate)
+                            {
+                                case TSFrameRate.FRAMERATE_59_94:
+                                    fps = 59.94;
+                                    break;
+                                case TSFrameRate.FRAMERATE_50:
+                                    fps = 50;
+                                    break;
+                                case TSFrameRate.FRAMERATE_29_97:
+                                    fps = 29.97;
+                                    break;
+                                case TSFrameRate.FRAMERATE_25:
+                                    fps = 25;
+                                    break;
+                                case TSFrameRate.FRAMERATE_24:
+                                    fps = 24;
+                                    break;
+                                case TSFrameRate.FRAMERATE_23_976:
+                                    fps = 23.976;
+                                    break;
+                            }
+
+                            BDHandlerCore.LogDebug("Initiating refresh rate change: {0}", fps);
+                            RefreshRateChanger.SetRefreshRateBasedOnFPS(fps, filePath, RefreshRateChanger.MediaType.Video);
+                        }
+                    }
+                }
+
+                #endregion
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                BDHandlerCore.LogError("Exception while reading bluray structure {0} {1}", e.Message, e.StackTrace);
+                return true;
+            }
         }
 
-        /// <summary>
-        /// Gets the audio language from the stream
-        /// </summary>
-        /// <param name="iStream">stream index</param>
-        /// <returns>language string formatted as english name</returns>
-        public virtual string GetAudioLanguageFromStream(int iStream)
-        {
-            FilterStreamInfos info = FStreams.GetStreamInfos(StreamType.Audio, iStream);
-
-            if (info.LCID > 0)
-            {
-                string lang = GetEnglishNameByLCID(info.LCID);
-                BDHandlerCore.LogDebug("AudioLanguage() LCID: {0}, OUT: {1}", info.LCID, lang);
-            }
-
-            Guid guid = GetFilterGuidByStreamInfo(info);
-            if (guid == this.sourceFilter.GUID)
-            {
-                // todo: filter dictionary lookup
-                ISelectFilter filter = this.sourceFilter as ISelectFilter;
-                if (filter != null)
-                {
-                    string language = filter.ParseAudioLanguage(info.Name);
-                    BDHandlerCore.LogDebug("AudioLanguage() Filter: {0}, IN: {1} OUT: {2}", filter.Name, info.Name, language);
-                    return language;
-                }
-            }
-            else
-            {
-                BDHandlerCore.LogDebug("AudioLanguage() Filter: Unknown, GUID={0}", guid.ToString());
-            }
-
-            // if we made it this far just do the native dance
-            return base.AudioLanguage(iStream);
-        }
-
-        /// <summary>
-        /// Gets the subtitle language from the stream
-        /// </summary>
-        /// <param name="iStream"></param>
-        /// <returns>language string formatted as english name</returns>
-        public virtual string GetSubtitleLanguageFromStream(int iStream)
-        {
-            FilterStreamInfos info = FStreams.GetStreamInfos(StreamType.Subtitle, iStream);
-
-            if (info.LCID > 0)
-            {
-                return GetEnglishNameByLCID(info.LCID);
-            }
-
-            Guid guid = GetFilterGuidByStreamInfo(info);
-            if (guid == this.sourceFilter.GUID)
-            {
-                // todo: filter dictionary lookup
-                ISelectFilter filter = this.sourceFilter as ISelectFilter;
-                if (filter != null)
-                {
-                    string language = filter.ParseSubtitleLanguage(info.Name);
-                    BDHandlerCore.LogDebug("SubtitleLanguage() Filter: {0}, IN: {1} OUT: {2}", filter.Name, info.Name, language);
-                    return language;
-                }
-            }
-            else
-            {
-                BDHandlerCore.LogDebug("SubtitleLanguage() Filter: Unknown, GUID={0}", guid.ToString());
-            }
-
-            return base.SubtitleLanguage(iStream);
-        }
-
-        /// <summary>
-        /// Gets the subtitle name from the stream
-        /// </summary>
-        /// <param name="iStream"></param>
-        /// <returns></returns>
-        public virtual string GetSubtitleNameFromStream(int iStream)
-        {
-            FilterStreamInfos info = FStreams.GetStreamInfos(StreamType.Subtitle, iStream);
-
-            Guid guid = GetFilterGuidByStreamInfo(info);
-            if (guid == this.sourceFilter.GUID)
-            {
-                ISelectFilter filter = this.sourceFilter as ISelectFilter;
-                if (filter != null)
-                {
-                    string name = filter.ParseSubtitleName(info.Name);
-                    BDHandlerCore.LogDebug("SubtitleName() Filter: {0}, IN: {1} OUT: {2}", filter.Name, info.Name, name);
-                    return name;
-                }
-            }
-            else
-            {
-                BDHandlerCore.LogDebug("SubtitleName() Filter: Unknown, GUID={0}", guid.ToString());
-            }
-
-            return base.SubtitleLanguage(iStream);
-        }
-
-        /// <summary>
-        /// Gets the english name by LCID.
-        /// </summary>
-        /// <param name="lcid">The lcid.</param>
-        /// <returns></returns>
-        public static string GetEnglishNameByLCID(int lcid)
-        {
-            return CultureInfo.GetCultureInfo(lcid).EnglishName.Split('(')[0].Trim();
-        }
-
-        #endregion
     }
 }

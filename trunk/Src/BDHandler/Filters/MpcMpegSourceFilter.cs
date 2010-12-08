@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace MediaPortal.Plugins.BDHandler.Filters
@@ -19,7 +16,7 @@ namespace MediaPortal.Plugins.BDHandler.Filters
             get { return "MPC - Mpeg Source (Gabest)"; }
         }
 
-        Guid IFilter.GUID
+        Guid IFilter.ClassID
         {
             get { return new Guid("{1365BE7A-C86A-473C-9A41-C0A6E82C9FA3}"); }
         }
