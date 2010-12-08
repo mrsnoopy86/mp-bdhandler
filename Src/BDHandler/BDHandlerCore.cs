@@ -15,18 +15,18 @@ namespace MediaPortal.Plugins.BDHandler
 
         static BDHandlerCore() {}
 
-        private static FactoryWrapper _factory;
+        private static FactoryWrapper playerFactoryWrapper;
         private static string logPrefix = "BDHandler:";
 
         // todo: the source filter should be configurable in the final, currently we are hardcoding it to use MpcMpegSourceFilter
-        public static MpcMpegSourceFilter Filter = new MpcMpegSourceFilter();
+        public static MpcMpegSourceFilter Filter = SingletonProvider<MpcMpegSourceFilter>.Instance;
 
         public static bool Init() {
             try {
                 
                 IFilter filter = Filter;
 
-                RegistryKey key = Registry.ClassesRoot.OpenSubKey(@"CLSID\{" + filter.GUID.ToString() + @"}\InprocServer32", RegistryKeyPermissionCheck.ReadSubTree, RegistryRights.ReadKey);
+                RegistryKey key = Registry.ClassesRoot.OpenSubKey(@"CLSID\{" + filter.ClassID.ToString() + @"}\InprocServer32", RegistryKeyPermissionCheck.ReadSubTree, RegistryRights.ReadKey);
                 if (key != null) {
                     string codecFile = key.GetValue("", null).ToString();
                     if (!Path.IsPathRooted(codecFile)) 
@@ -61,15 +61,15 @@ namespace MediaPortal.Plugins.BDHandler
             }
             set {
                 if (value && !enabled) {
-                    if (_factory == null)
+                    if (playerFactoryWrapper == null)
                     {
-                        _factory = new FactoryWrapper(g_Player.Factory);
+                        playerFactoryWrapper = new FactoryWrapper(g_Player.Factory);
                     }
-                    g_Player.Factory = _factory;
+                    g_Player.Factory = playerFactoryWrapper;
                 }
                 else if (!value && enabled) 
                 {
-                    g_Player.Factory = _factory.GetDefaultFactory();
+                    g_Player.Factory = playerFactoryWrapper.GetDefaultFactory();
                 }
                 enabled = value;
             }

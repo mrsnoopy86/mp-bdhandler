@@ -5,26 +5,31 @@ using System.Text;
 using System.IO;
 using MediaPortal.Player;
 using MediaPortal.GUI.Library;
+using MediaPortal.Plugins.BDHandler.Player;
 
 namespace MediaPortal.Plugins.BDHandler {
     
-    public class FactoryWrapper : IPlayerFactory {
-        
-        IPlayerFactory _defaultFactory;
+    public class FactoryWrapper : IPlayerFactory 
+    {
+        IPlayerFactory defaultPlayerFactory;
 
-        public FactoryWrapper(IPlayerFactory factory) {
-            this._defaultFactory = factory;
+        public FactoryWrapper(IPlayerFactory factory) 
+        {
+            this.defaultPlayerFactory = factory;
         }
 
-        public IPlayerFactory GetDefaultFactory() {
-            return _defaultFactory;
+        public IPlayerFactory GetDefaultFactory() 
+        {
+            return this.defaultPlayerFactory;
         }
 
-        public IPlayer Create(string filename) {
+        public IPlayer Create(string filename) 
+        {
             return Create(filename, g_Player.MediaType.Video);
         }
 
-        public IPlayer Create(string filename, g_Player.MediaType type) {
+        public IPlayer Create(string filename, g_Player.MediaType type) 
+        {
             string filepath = filename.ToLower();
 
             if (filepath.Length < 4) {
@@ -35,11 +40,12 @@ namespace MediaPortal.Plugins.BDHandler {
                 }
             }
 
-            if (filepath.EndsWith(".mpls") || filepath.EndsWith(".bdmv") || (filepath.Contains(@"bdmv\stream") && filepath.EndsWith(".m2ts"))) {
+            if (filepath.EndsWith(".mpls") || filepath.EndsWith(".bdmv") || (filepath.Contains(@"bdmv\stream") && filepath.EndsWith(".m2ts"))) 
+            {
                 return GetBlurayPlayer();
             }
 
-            return _defaultFactory.Create(filename, type);
+            return this.defaultPlayerFactory.Create(filename, type);
         }
 
         public static BDPlayer GetBlurayPlayer()

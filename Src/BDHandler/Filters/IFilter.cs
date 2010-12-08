@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace MediaPortal.Plugins.BDHandler.Filters
 {
@@ -11,21 +8,21 @@ namespace MediaPortal.Plugins.BDHandler.Filters
     public interface IFilter
     {
         /// <summary>
-        /// Gets the name of the filter
+        /// Gets the friendly name of the filter.
         /// </summary>
-        /// <value>Name of the filter</value>
+        /// <value>a string representing the friendly name.</value>
         string Name { get; }
 
         /// <summary>
-        /// Gets the GUID of the filter
+        /// Gets the ClassID of the filter.
         /// </summary>
-        /// <value>The GUID.</value>
-        Guid GUID { get; }
+        /// <value>a GUID representing the ClassID.</value>
+        Guid ClassID { get; }
 
         /// <summary>
         /// Gets the recommended build number for this filter.
         /// </summary>
-        /// <value>The recommended build number.</value>
+        /// <value>an integer representing the recommended build number.</value>
         int RecommendedBuildNumber { get; }
 
     }
